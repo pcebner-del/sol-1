@@ -139,6 +139,10 @@ export class LabelLayer {
 
       it._x = x;
       it._y = y;
+      // Where the body actually is on screen, before clamping and before
+      // de-collision moves the label. The leader has to reach back to this.
+      it._ax = (_v.x * 0.5 + 0.5) * w;
+      it._ay = (-_v.y * 0.5 + 0.5) * h;
       placed.push(it);
     }
 
@@ -163,11 +167,26 @@ export function updateLabelLayers(layers, dt, camera, w, h, insets) {
   apply(placed);
 }
 
+// Gap the label body keeps from its own leader, matching the CSS margin.
+const STANDOFF = 27;
+
 function apply(placed) {
   for (const it of placed) {
     it.el.style.transform = `translate3d(${it._x.toFixed(1)}px, ${it._y.toFixed(1)}px, 0)`;
     it.el.style.opacity = it.opacity.toFixed(3);
     it.el.style.pointerEvents = it.opacity > 0.55 ? 'auto' : 'none';
+
+    // Aim the leader at the body itself. De-collision has almost certainly
+    // moved the label off its anchor by now, so the line has to be re-solved
+    // every frame rather than assumed to be a short horizontal stub.
+    const h = it.el.offsetHeight || 22;
+    const originX = it.flipped ? (it.width || 0) - STANDOFF : STANDOFF;
+    const dx = it._ax - (it._x + originX);
+    const dy = it._ay - (it._y + h / 2);
+    const s = it.el.style;
+    s.setProperty('--tick-x', `${originX.toFixed(1)}px`);
+    s.setProperty('--tick-len', `${Math.hypot(dx, dy).toFixed(1)}px`);
+    s.setProperty('--tick-ang', `${Math.atan2(dy, dx).toFixed(4)}rad`);
   }
 }
 

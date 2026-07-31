@@ -99,6 +99,13 @@ never pays for crater code:
 Icy moons (Europa, Enceladus, Triton…) shift to a brighter, bluer palette cut
 through by linear fracture systems.
 
+Label leaders are solved every frame. De-collision moves a label away from the
+body it names — by over a hundred pixels in a crowded system view — so a
+fixed-length tick would travel with the label and leave its marker hanging in
+empty space, well off the orbit ring. Length and angle are recomputed from the
+label's box to the body's projected position, so the line always lands on the
+body no matter how far the label was pushed.
+
 **Moons** — 18 major moons orbit their planets on faint traces, in the planet's
 own tilted equatorial plane (so Uranus's swing nearly vertical). Names fade in
 as you approach. Only the major moons are drawn to keep the view clean; each

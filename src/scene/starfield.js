@@ -34,10 +34,22 @@ uniform float uOpacity;
 void main(){
   vec2 uv = gl_PointCoord - 0.5;
   float d = length(uv) * 2.0;
+
+  // A point sprite is a square quad; the star is the disc inscribed in it.
+  // The exponential tail below never reaches the discard threshold inside
+  // that quad — it is still 1.6% at the edge midpoints and 0.43% in the
+  // corners against a 0.4% cutoff — so the whole square was being painted and
+  // then truncated by the quad boundary. Additively, on black, that is a
+  // visible box around every bright star, blinking as the twinkle carried the
+  // corners across the cutoff. Clip to the disc, and take the alpha smoothly
+  // to zero at its rim so there is no hard edge there either.
+  if (d >= 1.0) discard;
+
   float core = exp(-pow(d * 2.7, 2.0));
   float glow = exp(-d * 3.0) * 0.30;
-  float a = (core + glow) * vTw * uOpacity;
-  if (a < 0.004) discard;
+  float rim = smoothstep(1.0, 0.45, d);
+  float a = (core + glow) * rim * vTw * uOpacity;
+  if (a < 0.002) discard;
   gl_FragColor = vec4(vCol * a * 1.7, a);
 }
 `;

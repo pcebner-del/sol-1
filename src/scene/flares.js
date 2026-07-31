@@ -151,10 +151,17 @@ vec3 coolingRamp(float h){
 void main(){
   vec2 uv = gl_PointCoord - 0.5;
   float d = length(uv) * 2.0;
+
+  // Same square-quad truncation the starfield had, and worse here: the halo
+  // is still 0.6% in the corners, and X-class throws the most embers at the
+  // largest sizes. Clip to the inscribed disc and fade to zero at the rim.
+  if (d >= 1.0) discard;
+
   float core = exp(-pow(d * 2.5, 2.0));
   float halo = exp(-d * 2.8) * 0.32;
-  float a = (core + halo) * vAlpha * uEnv;
-  if (a < 0.004) discard;
+  float rim = smoothstep(1.0, 0.45, d);
+  float a = (core + halo) * rim * vAlpha * uEnv;
+  if (a < 0.002) discard;
 
   // Each ember cools along its own flight, biased by the flare's global heat.
   vec3 col = coolingRamp(min(vHeat * 0.65 + uHeat * 0.5, 1.0));

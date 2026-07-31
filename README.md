@@ -178,8 +178,14 @@ vantage included — creeps along the orbit.
 Device capability is detected once at boot (GPU renderer string, core count,
 device memory, pointer type) and picks a `high` / `medium` / `low` tier that
 sets pixel ratio, sphere tessellation, star count, flare particle budget, bloom
-resolution and shader octave count. Point-sprite sizes are clamped well inside
-the driver's limit (511 px on this Mac) — an unclamped sprite drifting near the
+resolution and shader octave count. Point sprites are clipped to the disc inscribed in their quad. A sprite's
+falloff has to reach zero *inside* the quad or the quad crops it, and neither
+the star nor the flare-ember shader did: the star's tail was still 1.6% at the
+edge midpoints and 0.43% in the corners against a 0.4% discard cutoff, so the
+whole square got painted and then truncated. Additively, on black, that is a
+faint box around the brightest stars — blinking, because the twinkle carried
+the corners back and forth across the cutoff. Point-sprite sizes are also
+clamped well inside the driver's limit (511 px on this Mac) — an unclamped sprite drifting near the
 near plane can be sized in the thousands of pixels, which is out of spec. If the first four seconds can't hold 26 fps
 the tier drops once more and the surface shader is recompiled with fewer
 octaves. There is no manual toggle — it scales itself.

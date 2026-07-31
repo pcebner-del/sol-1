@@ -50,7 +50,16 @@ void main(){
   float rim = smoothstep(1.0, 0.45, d);
   float a = (core + glow) * rim * vTw * uOpacity;
   if (a < 0.002) discard;
-  gl_FragColor = vec4(vCol * a * 1.7, a);
+
+  // Keep stars out of the bloom chain. Bloom blurs through a mip pyramid and
+  // upsamples bilinearly, so a source only a couple of pixels across comes
+  // back as a bilinear tent — a soft-edged square with a hot middle, weighted
+  // heaviest at the coarsest mip. Large smooth sources like the disc and the
+  // flares blur cleanly and should still bloom; a pinprick never will.
+  // Clamping just under the pass's threshold costs almost nothing visible,
+  // because ACES compresses that far into the highlights anyway, and it leaves
+  // every fainter star untouched.
+  gl_FragColor = vec4(min(vCol * a * 1.7, vec3(0.98)), a);
 }
 `;
 

@@ -200,7 +200,18 @@ vantage included — creeps along the orbit.
 Device capability is detected once at boot (GPU renderer string, core count,
 device memory, pointer type) and picks a `high` / `medium` / `low` tier that
 sets pixel ratio, sphere tessellation, star count, flare particle budget, bloom
-resolution and shader octave count. Point sprites are clipped to the disc inscribed in their quad. A sprite's
+resolution and shader octave count. Bloom is sized in *device* pixels and small point sources are kept out of it.
+UnrealBloomPass blurs through a mip pyramid and upsamples bilinearly, so a
+source smaller than a texel comes back as a bilinear tent — a soft-edged square
+with a hot middle — and at the default radius the pass weights its coarsest mip
+(a 32x upsample) the heaviest of all. Two things caused it: `setSize` was being
+handed CSS pixels against a device-pixel buffer, quartering the chain's linear
+resolution, and stars were bright enough to clear the luminosity threshold.
+Stars now clamp just under it, which costs almost nothing visible because ACES
+compresses that far into the highlights anyway. The disc and the flares are
+large and smooth, blur cleanly, and still bloom.
+
+Point sprites are clipped to the disc inscribed in their quad. A sprite's
 falloff has to reach zero *inside* the quad or the quad crops it, and neither
 the star nor the flare-ember shader did: the star's tail was still 1.6% at the
 edge midpoints and 0.43% in the corners against a 0.4% discard cutoff, so the

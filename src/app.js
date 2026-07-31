@@ -263,12 +263,21 @@ export class App {
     if (this.bloom) {
       // Setting `.resolution` does nothing — UnrealBloomPass sizes its mip
       // chain from the arguments to setSize() and never reads that field, so
-      // the quality knob was silently inert and bloom always ran at half the
-      // canvas. Resize the pass itself, after composer.setSize has already
-      // called it with the full size.
+      // the quality knob was silently inert. Resize the pass itself, after
+      // composer.setSize has already called it with the full size.
+      //
+      // In *device* pixels. The composer works in device pixels, so passing
+      // CSS pixels quietly quartered the bloom's linear resolution (the pass
+      // halves again internally): a 2880x1720 buffer was blurred through a
+      // 720x430 chain. A bright point then covered well under one texel, and
+      // bilinearly upsampling a sub-texel source produces a tent — a
+      // soft-edged square with a hot middle. That is the box that kept
+      // appearing around bright stars. Cheap in absolute terms: on a phone
+      // this takes the first mip from 146x316 to 292x633.
+      const pr = this.renderer.getPixelRatio();
       this.bloom.setSize(
-        Math.max(64, Math.round(w * QUALITY.bloomResolution)),
-        Math.max(64, Math.round(h * QUALITY.bloomResolution)),
+        Math.max(64, Math.round(w * pr * QUALITY.bloomResolution)),
+        Math.max(64, Math.round(h * pr * QUALITY.bloomResolution)),
       );
     }
     this.camera.aspect = w / h;

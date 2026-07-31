@@ -43,13 +43,30 @@ export class HUD {
         </div>
       </header>
 
+      <div class="sheet-scrim" data-el="scrim"></div>
+
+      <nav class="dock" aria-label="Panels">
+        <button class="dock-btn" data-sheet="data" aria-expanded="false">
+          <span class="dock-ico" aria-hidden="true">&#9670;</span>
+          <span class="dock-lbl">DATA</span>
+        </button>
+        <button class="dock-btn" data-sheet="view" aria-expanded="false">
+          <span class="dock-ico" aria-hidden="true">&#9673;</span>
+          <span class="dock-lbl">VIEW</span>
+        </button>
+      </nav>
+
       <section class="panel panel-telemetry">
-        <div class="panel-head"><span>STELLAR TELEMETRY</span><em>SDO/HMI</em></div>
+        <div class="panel-head"><span>STELLAR TELEMETRY</span><em>SDO/HMI</em>
+          <button class="sheet-close" data-sheet-close aria-label="Close">&times;</button>
+        </div>
         <ul class="readouts" data-el="readouts"></ul>
       </section>
 
       <aside class="panel panel-modes">
-        <div class="panel-head"><span>VIEW MODE</span></div>
+        <div class="panel-head"><span>VIEW MODE</span>
+          <button class="sheet-close" data-sheet-close aria-label="Close">&times;</button>
+        </div>
         <div class="mode-list" data-el="modes"></div>
         <div class="nav-tools" data-el="navtools">
           <div class="seg" role="group" aria-label="Camera control">
@@ -103,6 +120,7 @@ export class HUD {
       this.el[node.dataset.el] = node;
     }
 
+    this.sheet = null;
     this._buildReadouts();
     this._buildModes();
     this._buildFlares();
@@ -114,6 +132,16 @@ export class HUD {
     this.el.card.addEventListener('click', () => this.h.onCardClick?.());
 
     this.el.audio.addEventListener('click', () => this.h.onAudio?.());
+
+    // Phone dock: the two big panels collapse to chips and open as sheets.
+    for (const b of this.root.querySelectorAll('.dock-btn')) {
+      b.addEventListener('click', () => this.toggleSheet(b.dataset.sheet));
+    }
+    for (const b of this.root.querySelectorAll('[data-sheet-close]')) {
+      b.addEventListener('click', () => this.setSheet(null));
+    }
+    // Tapping the scrim (anywhere off the sheet) dismisses it.
+    this.el.scrim.addEventListener('pointerdown', () => this.setSheet(null));
     this.el.reset.addEventListener('click', () => this.h.onReset?.());
     this.el.eclipse.addEventListener('click', () => this.h.onEclipse?.());
     for (const b of this.root.querySelectorAll('.seg-btn')) {
@@ -147,7 +175,12 @@ export class HUD {
       </button>`,
     ).join('');
     for (const b of this.el.modes.querySelectorAll('.mode-btn')) {
-      b.addEventListener('click', () => this.h.onMode?.(b.dataset.mode));
+      b.addEventListener('click', () => {
+        // Choosing a view is a completed action — get the sheet out of the way
+        // so the transition is actually visible.
+        this.setSheet(null);
+        this.h.onMode?.(b.dataset.mode);
+      });
     }
   }
 
@@ -164,6 +197,7 @@ export class HUD {
       .join('');
     for (const b of this.el.flares.querySelectorAll('.flare-btn')) {
       b.addEventListener('click', () => {
+        this.setSheet(null);
         b.classList.remove('is-firing');
         void b.offsetWidth; // restart the CSS animation
         b.classList.add('is-firing');
@@ -208,6 +242,26 @@ export class HUD {
         : mode === 'section'
           ? 'HOVER OR TAP A LAYER FOR DETAIL'
           : 'DRAG TO ORBIT · SCROLL OR PINCH TO ZOOM';
+  }
+
+  /* ------------------------------------------------------------ phone dock */
+
+  /**
+   * Which collapsible panel is open, if any. Purely a state attribute — the
+   * phone breakpoint decides what that means visually, so larger screens keep
+   * showing both panels permanently and are untouched by this.
+   */
+  setSheet(name) {
+    this.sheet = name ?? null;
+    this.root.dataset.sheet = this.sheet ?? '';
+    for (const b of this.root.querySelectorAll('.dock-btn')) {
+      b.classList.toggle('is-open', b.dataset.sheet === this.sheet);
+      b.setAttribute('aria-expanded', String(b.dataset.sheet === this.sheet));
+    }
+  }
+
+  toggleSheet(name) {
+    this.setSheet(this.sheet === name ? null : name);
   }
 
   setNavMode(navMode) {

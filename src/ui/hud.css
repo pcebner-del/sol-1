@@ -1019,6 +1019,299 @@ button,
   .label-sub { display: none; }
 }
 
+
+/* ==========================================================================
+   PHONE BREAKPOINT
+   --------------------------------------------------------------------------
+   A restructure, not a scale-down. Above this the panels are permanent
+   furniture down the left and right edges, which works because there's room
+   either side of the sun. On a phone there isn't: they end up over the middle
+   of the canvas and eat the touch gestures underneath.
+
+   So on phone both panels collapse to chips on the screen edge and open as
+   dismissible sheets. Everything here is additive and scoped to this query —
+   iPad portrait (768px wide) and every desktop size are untouched.
+   ========================================================================== */
+
+/* Chips are phone-only furniture. */
+.dock { display: none; }
+.sheet-scrim { display: none; }
+.sheet-close { display: none; }
+
+@media (max-width: 560px), (max-height: 460px) and (orientation: landscape) {
+  #ui {
+    --pad: 10px;
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-l: env(safe-area-inset-left, 0px);
+    --safe-r: env(safe-area-inset-right, 0px);
+  }
+
+  /* Corner brackets are decoration we can't afford the space for. */
+  .corner,
+  .hint,
+  .log,
+  .clock,
+  .brand-sub,
+  .label-sub,
+  .panel-head em { display: none; }
+
+  .hud-top {
+    left: calc(var(--pad) + var(--safe-l));
+    right: calc(var(--pad) + var(--safe-r));
+    top: calc(env(safe-area-inset-top, 0px) + 8px);
+    align-items: center;
+  }
+
+  .brand-mark { width: 20px; height: 20px; }
+  .brand-mark span { width: 7px; height: 7px; }
+  .brand-title { font-size: 12px; letter-spacing: 0.2em; }
+  .chip { font-size: 8px; padding: 4px 7px; }
+
+  /* ---------------------------------------------------------------- dock */
+
+  .dock {
+    display: flex;
+    gap: 6px;
+    position: absolute;
+    pointer-events: none;   /* only the buttons take input */
+    z-index: 12;
+  }
+
+  .dock-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 12px;
+    background: rgba(6, 12, 18, 0.72);
+    border: 1px solid var(--line);
+    color: var(--cyan-dim);
+    font: inherit;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    cursor: pointer;
+    pointer-events: auto;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    /* Comfortable thumb target regardless of the label metrics. */
+    min-height: 40px;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+  }
+
+  .dock-btn.is-open {
+    background: rgba(255, 182, 72, 0.16);
+    border-color: rgba(255, 182, 72, 0.5);
+    color: var(--amber);
+  }
+
+  .dock-ico { font-size: 12px; line-height: 1; }
+
+  /* --------------------------------------------------------------- sheets */
+
+  .sheet-scrim {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    background: transparent;
+    pointer-events: none;
+  }
+
+  #ui[data-sheet]:not([data-sheet=""]) .sheet-scrim { pointer-events: auto; }
+
+  /* Collapsed by default — and display:none means they cannot intercept a
+     single touch meant for the canvas. */
+  .panel-telemetry,
+  .panel-modes {
+    display: none;
+    z-index: 11;
+    max-width: none;
+    transform: none;
+    background: linear-gradient(160deg, rgba(6, 12, 19, 0.93), rgba(3, 6, 10, 0.88));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #ui[data-sheet="data"] .panel-telemetry,
+  #ui[data-sheet="view"] .panel-modes { display: block; }
+
+  .panel-head {
+    position: sticky;
+    top: 0;
+    background: rgba(5, 10, 16, 0.96);
+    z-index: 1;
+  }
+
+  .sheet-close {
+    display: block;
+    background: none;
+    border: 0;
+    color: rgba(127, 233, 255, 0.6);
+    font-size: 20px;
+    line-height: 1;
+    padding: 0 2px;
+    margin: -4px -2px -4px 0;
+    cursor: pointer;
+  }
+
+  /* The tablet tier trims the readout list to fit a permanent narrow panel.
+     A sheet has the room, so give the full set back. */
+  .readouts li:nth-child(n + 5) { display: flex; }
+
+  /* Bigger touch targets inside the sheets. */
+  .mode-btn { padding: 12px 10px; }
+  .mode-hint { display: block; font-size: 7.5px; }
+  .seg-btn { padding: 11px 4px; }
+  .reset-btn,
+  .eclipse-btn { padding: 11px 6px; }
+  .audio-toggle { padding: 11px 10px; }
+  .readouts li { padding: 7px 12px; }
+
+  /* --------------------------------------------------------------- flares */
+
+  .panel-flares > .panel-head { display: none; }
+  .flare-list { padding: 5px; gap: 5px; }
+  .flare-btn { padding: 9px 4px 10px; min-height: 42px; }
+  .flare-class { font-size: 9px; letter-spacing: 0.12em; }
+  .flare-sub { display: none; }
+
+  /* ----------------------------------------------------------- info card */
+
+  .info-card {
+    z-index: 11;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
+}
+
+/* ------------------------------------------------------ phone · portrait */
+
+@media (max-width: 560px) and (orientation: portrait) {
+  /* Bottom stack, from the screen edge up: flares, dock, then any open sheet.
+     Same "keep it on the bottom edge, out of the way" idea as the flare row,
+     which was already working. */
+  .panel-flares {
+    left: var(--pad);
+    right: var(--pad);
+    bottom: calc(var(--safe-b) + var(--pad));
+    width: auto;
+    transform: none;
+  }
+
+  .dock {
+    left: var(--pad);
+    right: var(--pad);
+    bottom: calc(var(--safe-b) + var(--pad) + 62px);
+  }
+
+  .dock-btn { flex: 1; justify-content: center; }
+
+  .panel-telemetry,
+  .panel-modes {
+    left: var(--pad);
+    right: var(--pad);
+    bottom: calc(var(--safe-b) + var(--pad) + 112px);
+    top: auto;
+    width: auto;
+    max-height: 48dvh;
+  }
+
+  .info-card {
+    left: var(--pad);
+    right: var(--pad);
+    bottom: calc(var(--safe-b) + var(--pad) + 112px);
+    top: auto;
+    width: auto;
+    max-height: 42dvh;
+    transform: translateY(10px);
+  }
+
+  .info-card.is-open { transform: none; }
+}
+
+/* ----------------------------------------------------- phone · landscape */
+
+@media (max-height: 460px) and (orientation: landscape) {
+  /* Vertical room is the scarce axis here, so nothing docks to the top or
+     bottom edge except a slim flare strip. The chips ride the left and right
+     edges and their sheets open against the same edge. */
+  .dock {
+    inset: 0;
+    display: block;
+  }
+
+  .dock-btn {
+    position: absolute;
+    top: 50%;
+    flex-direction: column;
+    gap: 3px;
+    padding: 10px 7px;
+    min-width: 42px;
+  }
+
+  .dock-btn[data-sheet="data"] {
+    left: calc(var(--safe-l) + 6px);
+    transform: translateY(-50%);
+  }
+
+  .dock-btn[data-sheet="view"] {
+    right: calc(var(--safe-r) + 6px);
+    transform: translateY(-50%);
+  }
+
+  .dock-lbl { font-size: 7px; letter-spacing: 0.14em; }
+
+  .panel-telemetry,
+  .panel-modes {
+    top: 8px;
+    bottom: auto;
+    /* Hug the content and scroll only if it outgrows the screen — a forced
+       full-height box leaves a large empty panel over the scene. */
+    max-height: calc(100dvh - 16px);
+    width: min(46vw, 260px);
+  }
+
+  .panel-telemetry { left: calc(var(--safe-l) + 56px); right: auto; }
+  .panel-modes { right: calc(var(--safe-r) + 56px); left: auto; }
+
+  /* Slim, centred, and narrow enough to leave the edges to the chips. */
+  .panel-flares {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    bottom: calc(var(--safe-b) + 6px);
+    width: min(300px, 60vw);
+  }
+
+  .flare-btn { padding: 7px 3px 8px; min-height: 34px; }
+  .flare-class { font-size: 8px; }
+
+  /* There isn't room for the flare row and a docked side panel at once on a
+     390px tall screen. Both are one tap from closing, so let them have the
+     space. (An engine without :has() just keeps the old overlap.) */
+  #ui[data-sheet]:not([data-sheet=""]) .panel-flares,
+  #ui:has(.info-card.is-open) .panel-flares {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .panel-flares { transition: opacity 0.25s; }
+
+  .info-card {
+    right: calc(var(--safe-r) + 56px);
+    left: auto;
+    top: 8px;
+    bottom: auto;
+    width: min(46vw, 280px);
+    max-height: calc(100dvh - 16px);
+    transform: translateX(10px);
+  }
+
+  .info-card.is-open { transform: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   #grain { animation: none; }
   .brand-mark span, .chip-live i { animation: none; }

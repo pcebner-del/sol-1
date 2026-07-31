@@ -710,6 +710,7 @@ app.canvas.addEventListener('pointerup', (e) => {
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
+    hud.setSheet(null);
     pinned = false;
     setActiveLayer(null);
     hud.hideCard();
@@ -764,7 +765,14 @@ const controller = {
     const w = window.innerWidth;
     const h = window.innerHeight;
     // Keep labels clear of the HUD panels, which sit above them in z-order.
-    const insets = w < 560 ? { top: 250, bottom: 150 } : { top: 60, bottom: 62 };
+    // Phone collapses the side panels into chips, so the only reserved bands
+    // are the title strip and the dock + flare row along the bottom edge.
+    const landscape = h < 460 && w > h;
+    const insets = landscape
+      ? { top: 40, bottom: 68 }
+      : w < 560
+        ? { top: 76, bottom: 128 }
+        : { top: 60, bottom: 62 };
 
     // Planet labels fade in as the system opens up.
     const dist = camera.position.length();

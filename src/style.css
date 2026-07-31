@@ -18,6 +18,13 @@
 
 html,
 body {
+  /* Fixed, not just overflow:hidden. This is a full-screen interactive scene,
+     never a scrolling page — on iOS an overflowing child (a tall info sheet)
+     can still drag the whole document, which slides the canvas out from under
+     the user mid-gesture. */
+  position: fixed;
+  inset: 0;
+  width: 100%;
   height: 100%;
   background: #000;
   overflow: hidden;
@@ -31,6 +38,8 @@ body {
 #app {
   position: fixed;
   inset: 0;
+  /* dvh tracks the iOS URL bar so the scene never sits under it. */
+  height: 100dvh;
 }
 
 #scene {

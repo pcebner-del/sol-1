@@ -134,15 +134,22 @@ function deCollide(items, h, insets) {
   items.sort((a, b) => a._y - b._y);
 
   for (let i = 1; i < items.length; i++) {
-    const prev = items[i - 1];
     const cur = items[i];
-    // Only fight if they also overlap horizontally.
-    const aL = prev._x;
-    const aR = prev._x + (prev.width || 120);
     const bL = cur._x;
     const bR = cur._x + (cur.width || 120);
-    if (bL > aR || bR < aL) continue;
-    if (cur._y - prev._y < GAP) cur._y = prev._y + GAP;
+
+    // Against every label already placed, not just the one directly above.
+    // Horizontal overlap isn't transitive: A and B can miss each other while
+    // both hit C, and a neighbour-only sweep never sees that — which is how
+    // labels ended up stacked on a narrow screen, where far more of them
+    // share a column.
+    for (let j = 0; j < i; j++) {
+      const prev = items[j];
+      const aL = prev._x;
+      const aR = prev._x + (prev.width || 120);
+      if (bL > aR || bR < aL) continue;
+      if (cur._y - prev._y < GAP) cur._y = prev._y + GAP;
+    }
   }
 
   // If pushing down ran us off the bottom, shift the whole stack back up.

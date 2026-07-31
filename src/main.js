@@ -202,6 +202,7 @@ function setMode(next, { silent = false } = {}) {
   if (!pinned) setActiveLayer(null);
   pinned = false;
   hud.hideCard();
+  syncFlares();
 
   if (next === 'surface') {
     fade.systemTarget = 0;
@@ -270,6 +271,7 @@ function setNavMode(m) {
       setTrack(null);
       followIndex = -1;
       hud.setResetVisible(true);
+      syncFlares();
     }
   } else {
     c.enablePan = false;
@@ -317,6 +319,11 @@ function cardClearance(offset, dist) {
   return screenRight.multiplyScalar(viewH * app.camera.aspect * 0.16);
 }
 
+/** Flares belong to the Sun; hide the row whenever a planet has the camera. */
+function syncFlares() {
+  hud.setFlaresVisible(!(mode === 'system' && followIndex >= 0));
+}
+
 function followPlanet(index) {
   if (mode !== 'system') return;
   const p = PLANETS[index];
@@ -345,6 +352,7 @@ function followPlanet(index) {
     onDone: () => setTrack(getEarthLike, true),
   });
   hud.setResetVisible(true);
+  syncFlares();
 
   hud.showCard({
     name: p.name,
@@ -664,6 +672,7 @@ const hud = new HUD(document.getElementById('ui'), {
   onReset: () => {
     followIndex = -1;
     setTrack(null);
+    syncFlares();
     if (eclipseActive()) {
       beginEclipseExit();
       return;

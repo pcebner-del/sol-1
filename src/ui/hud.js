@@ -102,7 +102,7 @@ export class HUD {
           </button>
         </nav>
 
-        <section class="panel panel-flares">
+        <section class="panel panel-flares" data-el="flarepanel">
           <div class="panel-head"><span>FLARE INJECTOR</span><em>GOES CLASS</em></div>
           <div class="flare-list" data-el="flares"></div>
         </section>
@@ -303,6 +303,15 @@ export class HUD {
   setResetVisible(v) {
     this.el.reset.hidden = !v;
     this.el['dock-reset'].hidden = !v;
+  }
+
+  /**
+   * The flare row is about the Sun, so it has no business being on screen
+   * while the camera is parked on a planet. On a phone it is also the thing
+   * holding the planet card up over the body it describes.
+   */
+  setFlaresVisible(v) {
+    this.el.flarepanel.hidden = !v;
   }
 
   setEclipseVisible(v) {

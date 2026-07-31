@@ -65,7 +65,12 @@ carve a wedge out of the sun (a fragment survives if *either* plane keeps it,
 so only the wedge is removed). Nested shells show the core, radiative and
 convective zones; two banded half-discs sit on the cut planes. The opening is
 aimed off the view axis so you see both the banded slice and into the cavity.
-Cards are driven by the layer *labels* only — the sun body itself is purely
+Labels activate on press for touch rather than on release: opening a card can
+put the card over the label that was just pressed, and iOS then retargets the
+release to the card or cancels the pointer outright, losing the tap. Only the
+lowest labels — core, radiative zone, convective zone — were close enough to
+their own card to hit it. Mouse keeps press-and-release, so dragging off a
+label still cancels. Cards are driven by the layer *labels* only — the sun body itself is purely
 something you grab and rotate, so dragging it never fights a card appearing
 under the cursor. Hovering the card counts as staying on its layer, and the
 matching region highlights. Sunspots get their own card even though they aren't

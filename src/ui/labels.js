@@ -34,13 +34,30 @@ export class LabelLayer {
       // gesture to this label wherever it ends up.
       let down = null;
       el.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+
+        // Touch has no hover state, so a press on a label is unambiguously a
+        // tap — fire now rather than waiting for the release. Waiting was the
+        // bug: opening a card can put the card itself over the label that was
+        // just pressed, and iOS then retargets the release to the card (or
+        // cancels the pointer outright), so the tap was lost and only the
+        // hover path had run. The card appeared on press and the leave-buffer
+        // swept it away again. It hit exactly the labels low enough for their
+        // own card to reach them — core, radiative zone, convective zone.
+        if (e.pointerType !== 'mouse') {
+          onClick(id);
+          return;
+        }
+
+        // Mouse keeps press-and-release semantics, so a drag off the label
+        // still cancels. Capture keeps the release bound here if the stack
+        // reflows underneath it.
         down = { x: e.clientX, y: e.clientY };
         try {
           el.setPointerCapture(e.pointerId);
         } catch {
           // Capture is a nicety; the fallback is the click below.
         }
-        e.stopPropagation();
       });
       el.addEventListener('pointerup', (e) => {
         try {

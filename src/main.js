@@ -194,6 +194,7 @@ function setMode(next, { silent = false } = {}) {
   const prev = mode;
   mode = next;
   followIndex = -1;
+  trackingBody = false;
   setTrack(null);
   hud.setResetVisible(false);
   hud.setEclipseVisible(next === 'system');
@@ -267,9 +268,10 @@ function setNavMode(m) {
     c.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
     c.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE };
     // Panning while locked to a body would just be fought by the tracker.
-    if (track || followIndex >= 0) {
+    if (track || followIndex >= 0 || trackingBody) {
       setTrack(null);
       followIndex = -1;
+      trackingBody = false;
       hud.setResetVisible(true);
       syncFlares();
     }
@@ -319,9 +321,15 @@ function cardClearance(offset, dist) {
   return screenRight.multiplyScalar(viewH * app.camera.aspect * 0.16);
 }
 
-/** Flares belong to the Sun; hide the row whenever a planet has the camera. */
+/**
+ * True whenever the camera has been flown to a body. followIndex alone doesn't
+ * cover Ceres, which isn't in the planet list and leaves followIndex at -1.
+ */
+let trackingBody = false;
+
+/** Flares belong to the Sun; hide the row whenever a body has the camera. */
 function syncFlares() {
-  hud.setFlaresVisible(!(mode === 'system' && followIndex >= 0));
+  hud.setFlaresVisible(!(mode === 'system' && trackingBody));
 }
 
 function followPlanet(index) {
@@ -351,6 +359,7 @@ function followPlanet(index) {
     targetOffset: cardClearance(offset, dist),
     onDone: () => setTrack(getEarthLike, true),
   });
+  trackingBody = true;
   hud.setResetVisible(true);
   syncFlares();
 
@@ -374,19 +383,23 @@ function showAsteroid() {
   const get = (out) => system.asteroid.worldPosition(out);
   get(_tmp);
   followIndex = -1;
+  trackingBody = true;
   hud.setResetVisible(true);
+  syncFlares();
   const outward = _tmp.clone().normalize();
   const tangent = new THREE.Vector3(-outward.z, 0, outward.x);
   const d = Math.max(0.9, ASTEROID.radius * 20);
+  const offset = new THREE.Vector3()
+    .addScaledVector(outward, -d * 0.6)
+    .addScaledVector(tangent, d * 0.6)
+    .add(new THREE.Vector3(0, d * 0.3, 0));
   app.setDistanceLimits(ASTEROID.radius * 2, systemDistance() * 1.9);
   app.flyToTracked({
     trackFn: get,
-    offset: new THREE.Vector3()
-      .addScaledVector(outward, -d * 0.6)
-      .addScaledVector(tangent, d * 0.6)
-      .add(new THREE.Vector3(0, d * 0.3, 0)),
+    offset,
     duration: 2.4,
     ease: easeOutQuint,
+    targetOffset: cardClearance(offset, d),
     onDone: () => setTrack(get, true),
   });
   hud.showCard({
@@ -671,6 +684,7 @@ const hud = new HUD(document.getElementById('ui'), {
   },
   onReset: () => {
     followIndex = -1;
+    trackingBody = false;
     setTrack(null);
     syncFlares();
     if (eclipseActive()) {

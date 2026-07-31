@@ -25,10 +25,40 @@ export class LabelLayer {
       </span>`;
     if (onClick) {
       el.classList.add('is-clickable');
-      el.addEventListener('click', (e) => {
+      // Not a plain click listener. Showing a card reflows the whole label
+      // stack, so the label can move out from under the finger between press
+      // and release — the browser then fires click on a common ancestor
+      // instead of this element and the tap is silently lost. On a phone that
+      // read as "the card appears while I hold and vanishes when I let go",
+      // because only the hover path ever ran. Capturing the pointer pins the
+      // gesture to this label wherever it ends up.
+      let down = null;
+      el.addEventListener('pointerdown', (e) => {
+        down = { x: e.clientX, y: e.clientY };
+        try {
+          el.setPointerCapture(e.pointerId);
+        } catch {
+          // Capture is a nicety; the fallback is the click below.
+        }
+        e.stopPropagation();
+      });
+      el.addEventListener('pointerup', (e) => {
+        try {
+          el.releasePointerCapture(e.pointerId);
+        } catch {
+          /* never captured */
+        }
+        if (!down) return;
+        const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
+        down = null;
+        if (moved > 10) return; // a drag, not a tap
         e.stopPropagation();
         onClick(id);
       });
+      el.addEventListener('pointercancel', () => {
+        down = null;
+      });
+      el.addEventListener('click', (e) => e.stopPropagation());
     }
     if (onHover) {
       el.addEventListener('pointerenter', () => onHover(id, true));

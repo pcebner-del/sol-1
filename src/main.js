@@ -40,6 +40,8 @@ const moonLabels = new LabelLayer(overlay);
 const layerLabels = new LabelLayer(overlay);
 
 const _tmp = new THREE.Vector3();
+const _eclTarget = new THREE.Vector3();
+const _eclScratch = new THREE.Vector3();
 
 PLANETS.forEach((p, i) => {
   const item = planetLabels.add({
@@ -150,10 +152,23 @@ const fade = {
 };
 
 /** Frames the sun with a little breathing room whatever the aspect ratio. */
+/**
+ * True for phone-sized viewports in either orientation, matching the CSS
+ * breakpoint that restructures the HUD. Tablets and desktops are excluded.
+ */
+function isPhone() {
+  return window.innerWidth < 560 || (window.innerHeight < 460 && window.innerWidth > window.innerHeight);
+}
+
 function sectionDistance() {
   const vFov = (app.camera.fov * Math.PI) / 180;
   const hFov = 2 * Math.atan(Math.tan(vFov / 2) * app.camera.aspect);
-  return Math.max(1.3 / Math.tan(hFov / 2), 1.3 / Math.tan(vFov / 2)) * 1.06;
+  // How much room to leave around the disc. The generous figure exists to keep
+  // the corona in frame, but on a phone that reads as a small sun adrift in a
+  // lot of black. 1.12 still clears the photosphere itself by 12%, so it can't
+  // clip at any viewport, it just crops the outer corona.
+  const fit = isPhone() ? 1.12 : 1.3;
+  return Math.max(fit / Math.tan(hFov / 2), fit / Math.tan(vFov / 2)) * (isPhone() ? 1.0 : 1.06);
 }
 
 /**
@@ -162,6 +177,7 @@ function sectionDistance() {
  * space, so we sit closer.
  */
 function surfaceDistance() {
+  if (isPhone()) return sectionDistance();
   return sectionDistance() * (app.camera.aspect < 0.85 ? 1.06 : 1.32);
 }
 
@@ -270,6 +286,37 @@ function orbitPosition(distance, elevation) {
   return new THREE.Vector3(Math.sin(az) * horiz, Math.sin(elevation) * distance, Math.cos(az) * horiz);
 }
 
+/**
+ * On a phone the info card is a large slab of screen, and a planet framed dead
+ * centre ends up half behind it. Aim a little to the side of the body so it
+ * sits in the part of the screen that is actually free: above the card in
+ * portrait, beside it in landscape. Returns null on larger screens, where the
+ * card sits in the margin and there is nothing to dodge.
+ */
+function cardClearance(offset, dist) {
+  if (!isPhone()) return null;
+
+  // Screen axes at the planet, derived from the view direction rather than
+  // world up — the camera looks down at the ecliptic, so they are not the same.
+  const viewDir = offset.clone().negate().normalize();
+  const up = new THREE.Vector3(0, 1, 0);
+  const screenUp = up.clone().addScaledVector(viewDir, -up.dot(viewDir));
+  if (screenUp.lengthSq() < 1e-6) return null;
+  screenUp.normalize();
+
+  const vFov = (app.camera.fov * Math.PI) / 180;
+  const viewH = 2 * dist * Math.tan(vFov / 2);
+
+  if (window.innerHeight >= window.innerWidth) {
+    // Portrait: card, dock and flare row own the bottom. Lift the planet by
+    // about a fifth of the frame, which puts it in the middle of what's left.
+    return screenUp.multiplyScalar(-viewH * 0.20);
+  }
+  // Landscape: the card docks to the right, so shift the planet left instead.
+  const screenRight = new THREE.Vector3().crossVectors(viewDir, screenUp).normalize();
+  return screenRight.multiplyScalar(viewH * app.camera.aspect * 0.16);
+}
+
 function followPlanet(index) {
   if (mode !== 'system') return;
   const p = PLANETS[index];
@@ -294,6 +341,7 @@ function followPlanet(index) {
     offset,
     duration: 2.4,
     ease: easeOutQuint,
+    targetOffset: cardClearance(offset, dist),
     onDone: () => setTrack(getEarthLike, true),
   });
   hud.setResetVisible(true);
@@ -398,7 +446,7 @@ function beginEclipse() {
   app.flyToTracked({
     trackFn: (out) => system.eclipseVantage(out),
     offset: new THREE.Vector3(),
-    lookAt: new THREE.Vector3(0, 0, 0),
+    lookAt: eclipseLookTarget(new THREE.Vector3()),
     duration: 3.2,
     ease: easeInOutCubic,
     onDone: () => {
@@ -487,8 +535,34 @@ function updateEclipse(dt, camera) {
   if (eclipseReady && !app.tween) {
     system.eclipseVantage(_tmp);
     camera.position.copy(_tmp);
-    app.controls.target.set(0, 0, 0);
+    app.controls.target.copy(eclipseLookTarget(_eclTarget));
   }
+}
+
+/**
+ * Where the totality shot aims. Normally the Sun itself, but on a phone the
+ * info card owns the bottom of the screen and the corona ring is centred on
+ * the Moon — so aim below the Sun, which lifts the whole ring into the part
+ * of the frame that is actually visible. Aiming rather than moving keeps it a
+ * pure rotation, so Moon and corona travel together.
+ */
+function eclipseLookTarget(out) {
+  out.set(0, 0, 0);
+  if (!isPhone() || window.innerHeight < window.innerWidth) return out;
+
+  system.eclipseVantage(_eclScratch);
+  const L = _eclScratch.length();
+  if (L < 1e-4) return out;
+
+  const viewDir = _eclScratch.clone().negate().normalize();
+  const screenUp = new THREE.Vector3(0, 1, 0);
+  screenUp.addScaledVector(viewDir, -screenUp.dot(viewDir));
+  if (screenUp.lengthSq() < 1e-6) return out;
+  screenUp.normalize();
+
+  const vFov = (app.camera.fov * Math.PI) / 180;
+  // 0.22 of the frame height; the card starts a little under halfway down.
+  return out.addScaledVector(screenUp, -0.22 * 2 * L * Math.tan(vFov / 2));
 }
 
 /* ----------------------------------------------------- layer interaction */
@@ -680,6 +754,26 @@ app.setDistanceLimits(1.32, 11);
 
 /* -------------------------------------------------------------- pointers */
 
+/**
+ * Block the browser's own pinch-zoom.
+ *
+ * iOS Safari has ignored `user-scalable=no` since iOS 10, so a two-finger
+ * gesture zoomed the *page* as well as the scene. That is what sent the HUD
+ * shrinking into the top-left corner with no way back — the panels are fixed
+ * to the viewport, and pinch-zoom moves the viewport out from under them —
+ * and what made the render look savagely pixelated, since the browser was
+ * upscaling an already-rendered canvas.
+ *
+ * These are Safari-only events and they don't exist elsewhere, so nothing is
+ * taken away from any other browser. OrbitControls still gets the raw touch
+ * events, so two-finger zoom of the scene is unaffected.
+ */
+for (const evt of ['gesturestart', 'gesturechange', 'gestureend']) {
+  document.addEventListener(evt, (e) => e.preventDefault(), { passive: false });
+}
+// Double-tap to zoom is the other way in, and it isn't covered by the above.
+document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 
@@ -809,7 +903,11 @@ const controller = {
     // Every planet keeps its label after you select one — you still need them
     // to navigate. Unselected ones just step back.
     for (const it of planetLabels.items) {
-      it.target = planetVis * (followIndex >= 0 && it.id !== followIndex ? 0.5 : 1);
+      // 0.62, not 0.5: labels below 0.55 have pointer-events switched off so
+      // fading ones don't eat taps, and dimming the unselected planets to 0.5
+      // took every one of them out of play the moment you picked a planet.
+      // Ceres is on a different layer, which is why it alone stayed clickable.
+      it.target = planetVis * (followIndex >= 0 && it.id !== followIndex ? 0.62 : 1);
     }
     for (const it of objectLabels.items) it.target = planetVis;
 

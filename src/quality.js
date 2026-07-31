@@ -40,7 +40,7 @@ const TIERS = {
   },
   medium: {
     tier: 'medium',
-    pixelRatio: 1.6,
+    pixelRatio: 2,
     sunSegments: 128,
     coronaSegments: 96,
     layerSegments: 96,
@@ -90,6 +90,17 @@ function pickTier() {
     renderer,
   );
   const strongGPU = /(apple m[1-9]|apple a1[5-9]|rtx|radeon rx|geforce gtx 1[06-9]|arc a)/i.test(renderer);
+
+  // Safari tells us almost nothing about an iPhone or iPad: WebGL reports a
+  // bare "Apple GPU" for every device ever made, deviceMemory doesn't exist,
+  // and hardwareConcurrency is commonly capped at 4. Run through the generic
+  // heuristics below and every modern iPhone lands on the lowest tier — which
+  // is what was capping the pixel ratio at 1.25 on a 3x display and cutting
+  // the sphere tessellation, so zooming in looked pixelated and faceted.
+  // Start these optimistically instead; the fps-based downgrade already exists
+  // to catch the devices that genuinely can't hold it.
+  const appleMobile = /iphone|ipad|ipod/i.test(ua) || (/\bMac/.test(ua) && navigator.maxTouchPoints > 1);
+  if (appleMobile) return /apple gpu|apple m[1-9]|apple a1[4-9]/i.test(renderer) ? 'medium' : 'low';
 
   if (weakGPU || cores <= 4 || mem <= 3) return 'low';
   if (isMobile) return strongGPU && cores >= 6 ? 'medium' : 'low';

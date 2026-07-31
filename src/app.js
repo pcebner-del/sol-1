@@ -142,7 +142,7 @@ export class App {
    * `rotateFrame` additionally carries the camera round with a heliocentric
    * orbit, so the sun stays put relative to the body.
    */
-  flyToTracked({ trackFn, offset, duration = 2.4, ease = easeInOutCubic, rotateFrame = true, lookAt = null, onDone = null }) {
+  flyToTracked({ trackFn, offset, duration = 2.4, ease = easeInOutCubic, rotateFrame = true, lookAt = null, targetOffset = null, onDone = null }) {
     const cur = new THREE.Vector3();
     trackFn(cur);
     this.tween = {
@@ -154,6 +154,10 @@ export class App {
       toPos: cur.clone().add(offset),
       toTarget: (lookAt ?? cur).clone(),
       lookAt: lookAt ? lookAt.clone() : null,
+      // Aims a fixed distance off the tracked body rather than straight at it,
+      // so the body can be framed away from screen furniture. Tracked, unlike
+      // lookAt, so it stays correct while the body moves along its orbit.
+      targetOffset: targetOffset ? targetOffset.clone() : null,
       rotateFrame,
       t: 0,
       duration: QUALITY.reducedMotion ? Math.min(duration, 0.4) : duration,
@@ -273,7 +277,10 @@ export class App {
       const e = tw.ease(tw.t);
       if (tw.tracked) {
         tw.trackFn(_trackScratch);
-        if (!tw.lookAt) tw.toTarget.copy(_trackScratch);
+        if (!tw.lookAt) {
+          tw.toTarget.copy(_trackScratch);
+          if (tw.targetOffset) tw.toTarget.add(tw.targetOffset);
+        }
         tw.toPos.copy(_trackScratch).add(tw.offset);
       }
       this.camera.position.lerpVectors(tw.fromPos, tw.toPos, e);

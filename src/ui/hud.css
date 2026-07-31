@@ -1033,6 +1033,10 @@ button,
    iPad portrait (768px wide) and every desktop size are untouched.
    ========================================================================== */
 
+/* The wrapper exists only so phone portrait can stack its children; every
+   other breakpoint must see the DOM exactly as it did before. */
+.bottom-stack { display: contents; }
+
 /* Chips are phone-only furniture. */
 .dock { display: none; }
 .sheet-scrim { display: none; }
@@ -1097,6 +1101,9 @@ button,
     transition: background 0.2s, border-color 0.2s, color 0.2s;
   }
 
+  /* .dock-btn sets display:flex, which outranks the UA rule for [hidden]. */
+  .dock-btn[hidden] { display: none; }
+
   .dock-btn.is-open {
     background: rgba(255, 182, 72, 0.16);
     border-color: rgba(255, 182, 72, 0.5);
@@ -1123,7 +1130,9 @@ button,
   .panel-telemetry,
   .panel-modes {
     display: none;
-    z-index: 11;
+    /* Above the info card: in landscape both dock to the same edge, and the
+       card is later in the DOM, so an opened sheet was rendering behind it. */
+    z-index: 13;
     max-width: none;
     transform: none;
     background: linear-gradient(160deg, rgba(6, 12, 19, 0.93), rgba(3, 6, 10, 0.88));
@@ -1159,18 +1168,53 @@ button,
      A sheet has the room, so give the full set back. */
   .readouts li:nth-child(n + 5) { display: flex; }
 
-  /* Bigger touch targets inside the sheets. */
-  .mode-btn { padding: 12px 10px; }
-  .mode-hint { display: block; font-size: 7.5px; }
+  /* View mode as a grid of tiles rather than a tall list. The list ran past
+     the bottom of the sheet and hid SOLAR ECLIPSE until you scrolled, which is
+     not something a five-item menu should ever ask for. Everything below fits
+     in roughly 240px, so nothing clips and nothing scrolls. */
+  .mode-list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+  }
+
+  .mode-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 10px 3px;
+    min-height: 54px;
+    text-align: center;
+  }
+
+  .mode-label { font-size: 8.5px; letter-spacing: 0.1em; line-height: 1.25; }
+  .mode-hint { display: none; }
+
+  .nav-tools {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+  }
+  .seg { grid-column: 1 / -1; }
+
   .seg-btn { padding: 11px 4px; }
   .reset-btn,
-  .eclipse-btn { padding: 11px 6px; }
+  .eclipse-btn { padding: 11px 4px; font-size: 8px; }
   .audio-toggle { padding: 11px 10px; }
   .readouts li { padding: 7px 12px; }
 
   /* --------------------------------------------------------------- flares */
 
-  .panel-flares > .panel-head { display: none; }
+  /* Keep the caption — it is the only thing naming what the row does. It sits
+     inside the bottom stack, so nothing can land on top of it. */
+  .panel-flares > .panel-head {
+    display: flex;
+    padding: 5px 9px 4px;
+    font-size: 7.5px;
+    letter-spacing: 0.18em;
+  }
   .flare-list { padding: 5px; gap: 5px; }
   .flare-btn { padding: 9px 4px 10px; min-height: 42px; }
   .flare-class { font-size: 9px; letter-spacing: 0.12em; }
@@ -1189,46 +1233,55 @@ button,
 /* ------------------------------------------------------ phone · portrait */
 
 @media (max-width: 560px) and (orientation: portrait) {
-  /* Bottom stack, from the screen edge up: flares, dock, then any open sheet.
-     Same "keep it on the bottom edge, out of the way" idea as the flare row,
-     which was already working. */
-  .panel-flares {
+  /* One flex column pinned to the bottom edge: card, chips, flares. Laying
+     them out as a stack rather than three absolute boxes with hand-computed
+     offsets means they cannot overlap each other at any screen height or
+     safe-area inset — which is what was burying the flare caption under the
+     chips. */
+  .bottom-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: absolute;
     left: var(--pad);
     right: var(--pad);
     bottom: calc(var(--safe-b) + var(--pad));
-    width: auto;
-    transform: none;
+    pointer-events: none;
+    z-index: 12;
   }
 
-  .dock {
-    left: var(--pad);
-    right: var(--pad);
-    bottom: calc(var(--safe-b) + var(--pad) + 62px);
+  .dock,
+  .panel-flares,
+  .info-card {
+    position: static;
+    width: auto;
+    max-width: none;
+    transform: none;
   }
 
   .dock-btn { flex: 1; justify-content: center; }
 
+  /* Last in the DOM so it paints above the rest, first in the column so it
+     reads at the top of the stack. */
+  .info-card {
+    order: -1;
+    max-height: 36dvh;
+  }
+
+  /* In flow, so it has to leave the flow entirely when closed. */
+  .info-card:not(.is-open) { display: none; }
+
+  /* Sheets hang from the top instead of measuring up from the bottom stack,
+     so their height and the stack's height are no longer coupled. */
   .panel-telemetry,
   .panel-modes {
     left: var(--pad);
     right: var(--pad);
-    bottom: calc(var(--safe-b) + var(--pad) + 112px);
-    top: auto;
+    top: calc(env(safe-area-inset-top, 0px) + 46px);
+    bottom: auto;
     width: auto;
-    max-height: 48dvh;
+    max-height: 56dvh;
   }
-
-  .info-card {
-    left: var(--pad);
-    right: var(--pad);
-    bottom: calc(var(--safe-b) + var(--pad) + 112px);
-    top: auto;
-    width: auto;
-    max-height: 42dvh;
-    transform: translateY(10px);
-  }
-
-  .info-card.is-open { transform: none; }
 }
 
 /* ----------------------------------------------------- phone · landscape */
@@ -1259,6 +1312,13 @@ button,
   .dock-btn[data-sheet="view"] {
     right: calc(var(--safe-r) + 6px);
     transform: translateY(-50%);
+  }
+
+  /* Sits under DATA on the same edge; without an explicit offset it defaults
+     to the same spot and the two chips print on top of each other. */
+  .dock-reset {
+    left: calc(var(--safe-l) + 6px);
+    transform: translateY(calc(-50% + 56px));
   }
 
   .dock-lbl { font-size: 7px; letter-spacing: 0.14em; }

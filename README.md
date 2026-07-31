@@ -171,6 +171,21 @@ near plane can be sized in the thousands of pixels, which is out of spec. If the
 the tier drops once more and the surface shader is recompiled with fewer
 octaves. There is no manual toggle — it scales itself.
 
+Apple's mobile devices are detected separately, because Safari tells us almost
+nothing about them: WebGL reports a bare `Apple GPU` for every device ever
+made, `deviceMemory` doesn't exist, and `hardwareConcurrency` is commonly
+capped at 4. Run those through the generic heuristics and every modern iPhone
+lands on the lowest tier, capping the pixel ratio at 1.25 on a 3x display and
+cutting the tessellation — which read as a pixelated, faceted render on the
+device with the nicest screen in the room. They start at `medium` instead, and
+the frame-rate downgrade is left to catch anything that can't hold it.
+
+The browser's own pinch-zoom is blocked. iOS Safari has ignored
+`user-scalable=no` since iOS 10, so a two-finger gesture zoomed the *page* as
+well as the scene: the HUD is fixed to the viewport, so it slid into a corner
+with no way back, and the canvas was upscaled by the browser on top of
+whatever it had already rendered.
+
 ## Data
 
 Figures in the readouts and info cards are real, rounded published values (core

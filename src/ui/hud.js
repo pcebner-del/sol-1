@@ -45,16 +45,6 @@ export class HUD {
 
       <div class="sheet-scrim" data-el="scrim"></div>
 
-      <nav class="dock" aria-label="Panels">
-        <button class="dock-btn" data-sheet="data" aria-expanded="false">
-          <span class="dock-ico" aria-hidden="true">&#9670;</span>
-          <span class="dock-lbl">DATA</span>
-        </button>
-        <button class="dock-btn" data-sheet="view" aria-expanded="false">
-          <span class="dock-ico" aria-hidden="true">&#9673;</span>
-          <span class="dock-lbl">VIEW</span>
-        </button>
-      </nav>
 
       <section class="panel panel-telemetry">
         <div class="panel-head"><span>STELLAR TELEMETRY</span><em>SDO/HMI</em>
@@ -87,14 +77,38 @@ export class HUD {
         </button>
       </aside>
 
-      <section class="panel panel-flares">
-        <div class="panel-head"><span>FLARE INJECTOR</span><em>GOES CLASS</em></div>
-        <div class="flare-list" data-el="flares"></div>
-      </section>
-
       <div class="log" data-el="log"></div>
 
-      <div class="info-card" data-el="card" aria-hidden="true"></div>
+      <!--
+        Dock, flare row and info card share a wrapper so the phone layout can
+        stack them instead of guessing offsets. It is display:contents
+        everywhere else, so every other breakpoint sees exactly the DOM it
+        saw before. The card stays last for paint order and is moved to the
+        top of the column with the order property on phone.
+      -->
+      <div class="bottom-stack">
+        <nav class="dock" aria-label="Panels">
+          <button class="dock-btn" data-sheet="data" aria-expanded="false">
+            <span class="dock-ico" aria-hidden="true">&#9670;</span>
+            <span class="dock-lbl">DATA</span>
+          </button>
+          <button class="dock-btn" data-sheet="view" aria-expanded="false">
+            <span class="dock-ico" aria-hidden="true">&#9673;</span>
+            <span class="dock-lbl">VIEW</span>
+          </button>
+          <button class="dock-btn dock-reset" data-el="dock-reset" hidden>
+            <span class="dock-ico" aria-hidden="true">&#8635;</span>
+            <span class="dock-lbl">RESET</span>
+          </button>
+        </nav>
+
+        <section class="panel panel-flares">
+          <div class="panel-head"><span>FLARE INJECTOR</span><em>GOES CLASS</em></div>
+          <div class="flare-list" data-el="flares"></div>
+        </section>
+
+        <div class="info-card" data-el="card" aria-hidden="true"></div>
+      </div>
 
       <div class="hint" data-el="hint">DRAG TO ORBIT &middot; SCROLL OR PINCH TO ZOOM</div>
       </div>
@@ -134,20 +148,35 @@ export class HUD {
     this.el.audio.addEventListener('click', () => this.h.onAudio?.());
 
     // Phone dock: the two big panels collapse to chips and open as sheets.
-    for (const b of this.root.querySelectorAll('.dock-btn')) {
+    for (const b of this.root.querySelectorAll('.dock-btn[data-sheet]')) {
       b.addEventListener('click', () => this.toggleSheet(b.dataset.sheet));
     }
+    // Reset needs to be reachable without opening a sheet first — on a phone
+    // the only way back out of a planet was to dig through the view panel.
+    this.el['dock-reset'].addEventListener('click', () => {
+      this.setSheet(null);
+      this.h.onReset?.();
+    });
     for (const b of this.root.querySelectorAll('[data-sheet-close]')) {
       b.addEventListener('click', () => this.setSheet(null));
     }
     // Tapping the scrim (anywhere off the sheet) dismisses it.
     this.el.scrim.addEventListener('pointerdown', () => this.setSheet(null));
-    this.el.reset.addEventListener('click', () => this.h.onReset?.());
-    this.el.eclipse.addEventListener('click', () => this.h.onEclipse?.());
+    // Every one of these is a completed action — get the sheet out of the way
+    // so the result is actually visible instead of sitting behind the panel.
+    this.el.reset.addEventListener('click', () => {
+      this.setSheet(null);
+      this.h.onReset?.();
+    });
+    this.el.eclipse.addEventListener('click', () => {
+      this.setSheet(null);
+      this.h.onEclipse?.();
+    });
     for (const b of this.root.querySelectorAll('.seg-btn')) {
       b.addEventListener('click', () => {
         this.setNavMode(b.dataset.nav);
         this.h.onNavMode?.(b.dataset.nav);
+        this.setSheet(null);
       });
     }
     this.el['boot-btn'].addEventListener('click', () => this.dismissBoot());
@@ -254,7 +283,7 @@ export class HUD {
   setSheet(name) {
     this.sheet = name ?? null;
     this.root.dataset.sheet = this.sheet ?? '';
-    for (const b of this.root.querySelectorAll('.dock-btn')) {
+    for (const b of this.root.querySelectorAll('.dock-btn[data-sheet]')) {
       b.classList.toggle('is-open', b.dataset.sheet === this.sheet);
       b.setAttribute('aria-expanded', String(b.dataset.sheet === this.sheet));
     }
@@ -273,6 +302,7 @@ export class HUD {
   /** The reset button only means anything once you've flown to something. */
   setResetVisible(v) {
     this.el.reset.hidden = !v;
+    this.el['dock-reset'].hidden = !v;
   }
 
   setEclipseVisible(v) {

@@ -37,7 +37,9 @@ export class SolarSystem {
     this._camWorld = new THREE.Vector3();
 
     const seg = QUALITY.tier === 'low' ? 28 : QUALITY.tier === 'medium' ? 44 : 64;
-    const moonSeg = QUALITY.tier === 'low' ? 12 : QUALITY.tier === 'medium' ? 18 : 26;
+    // The Moon is the subject of the whole totality shot, so it has to read as
+    // a sphere rather than a die. Cheap: eighteen small spheres.
+    const moonSeg = QUALITY.tier === 'low' ? 24 : QUALITY.tier === 'medium' ? 32 : 40;
 
     // One geometry per size class, scaled per instance.
     this.bodyGeo = new THREE.SphereGeometry(1, seg, Math.round(seg / 2));

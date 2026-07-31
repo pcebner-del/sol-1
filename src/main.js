@@ -629,22 +629,42 @@ setNavMode('orbit');
  * someone pressing a control labelled "SOUND ON" expects.
  */
 hud.setAudio(true);
+
+// touchend and click are included because Safari is pickier about what counts
+// as user activation for audio than the pointer events alone suggest.
+const ARM_EVENTS = ['pointerdown', 'touchend', 'click', 'keydown'];
 let audioArmed = false;
+let audioArming = false;
+
+function releaseArm() {
+  audioArmed = true;
+  for (const evt of ARM_EVENTS) window.removeEventListener(evt, armAudio, true);
+}
 
 function armAudio() {
-  if (audioArmed) return;
-  audioArmed = true;
-  for (const evt of ['pointerdown', 'keydown', 'touchstart']) {
-    window.removeEventListener(evt, armAudio, true);
-  }
-  const on = audio.toggle();
-  hud.setAudio(on);
-  if (on) hud.log('AUDIO BED ENGAGED · SYNTHESISED');
+  if (audioArmed || audioArming) return;
+  audioArming = true;
+
+  // Only stand down once the context is confirmed running. The old version
+  // unhooked itself on the first attempt, so a gesture Safari declined left
+  // the page permanently silent with the panel still claiming SOUND ON.
+  audio.start().then((running) => {
+    audioArming = false;
+    if (!running) {
+      hud.setAudio(false);
+      return;
+    }
+    releaseArm();
+    hud.setAudio(audio.on);
+    if (audio.on) hud.log('AUDIO BED ENGAGED · SYNTHESISED');
+  });
 }
 
-for (const evt of ['pointerdown', 'keydown', 'touchstart']) {
-  window.addEventListener(evt, armAudio, true);
-}
+for (const evt of ARM_EVENTS) window.addEventListener(evt, armAudio, true);
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) audio.resumeIfBackgrounded();
+});
 
 // Start well outside, then glide in once the viewer enters.
 app.camera.position.set(1.6, 1.4, 9.4);

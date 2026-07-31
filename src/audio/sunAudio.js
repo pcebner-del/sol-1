@@ -20,6 +20,19 @@ export class SunAudio {
     if (this.ctx) return;
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
+
+    // iOS silences Web Audio whenever the ringer switch is set to silent,
+    // unless the page declares that it is playing back media rather than
+    // making incidental interface noises. That single line is the difference
+    // between a working iPad (no ringer switch) and a silent iPhone. Set it
+    // before the context exists so the session is categorised from the start.
+    try {
+      if (navigator.audioSession) navigator.audioSession.type = 'playback';
+    } catch {
+      // Older Safari: no audio session API, so the ringer switch wins and
+      // there is nothing further we can do from here.
+    }
+
     const ctx = new AC();
     this.ctx = ctx;
 
@@ -173,23 +186,63 @@ export class SunAudio {
     this._init();
     if (!this.ctx) return false;
 
-    this.on = !this.on;
-
     // Resume can settle later; the gain ramp doesn't need to wait for it.
     if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+    this._ramp(!this.on);
+    return this.on;
+  }
+
+  /**
+   * Bring the bed up on a user gesture. Unlike toggle() this is idempotent, so
+   * the auto-arm can safely try again: on iOS the first gesture often hands
+   * back a context that never leaves `suspended`, and a second tap fixes it.
+   *
+   * Resolves with whether the context genuinely reached `running`. Until it
+   * has, nothing has actually started, however healthy the graph looks.
+   */
+  async start() {
+    this._init();
+    if (!this.ctx) return false;
+
+    // Ramp up synchronously, before the first await. If this same gesture also
+    // landed on the SOUND toggle, that handler runs in this tick and has to see
+    // audio already on so it can turn it straight back off — which is what
+    // pressing a control labelled "SOUND ON" is meant to do.
+    if (!this.on) this._ramp(true);
+
+    if (this.ctx.state === 'suspended') {
+      try {
+        await this.ctx.resume();
+      } catch {
+        // Gesture wasn't accepted. The caller stays armed and retries.
+      }
+    }
+    return this.ctx.state === 'running';
+  }
+
+  /**
+   * iOS suspends the context when the tab goes to the background and does not
+   * resume it on return, so the sound would simply never come back after a
+   * call, a lock, or an app switch.
+   */
+  resumeIfBackgrounded() {
+    if (this.on && this.ctx?.state === 'suspended') this.ctx.resume().catch(() => {});
+  }
+
+  _ramp(on) {
+    this.on = on;
 
     const t = this.ctx.currentTime;
     this.master.gain.cancelScheduledValues(t);
     this.master.gain.setValueAtTime(Math.max(this.master.gain.value, 0.0001), t);
-    this.master.gain.linearRampToValueAtTime(this.on ? 0.5 : 0.0001, t + (this.on ? FADE : 1.2));
+    this.master.gain.linearRampToValueAtTime(on ? 0.5 : 0.0001, t + (on ? FADE : 1.2));
 
     clearTimeout(this._suspendTimer);
-    if (!this.on) {
+    if (!on) {
       this._suspendTimer = setTimeout(() => {
         if (!this.on && this.ctx?.state === 'running') this.ctx.suspend();
       }, 1500);
     }
-    return this.on;
   }
 
   /* ------------------------------------------------------------ one-shots */

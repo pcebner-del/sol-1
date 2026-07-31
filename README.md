@@ -120,7 +120,14 @@ is stylised: Ceres does outgas water vapour, but not as a persistent visible tai
 
 **Audio** — On by default. Browsers won't let an AudioContext start without a
 gesture, so it arms on the first interaction *anywhere* rather than making you
-hunt for the toggle. A synthesised bed: sub-bass sines with slow beating, a
+hunt for the toggle. Arming only stands down once the context is confirmed
+`running`; a gesture Safari declines leaves the listener in place to try again,
+and the panel reports the real state rather than the intended one. The session
+is declared `playback` via `navigator.audioSession`, without which iOS silences
+Web Audio whenever the ringer switch is set to silent — the reason sound could
+work on a Mac and an iPad but not on an iPhone. The context is also resumed on
+`visibilitychange`, since iOS suspends it on an app switch and never restores
+it by itself. A synthesised bed: sub-bass sines with slow beating, a
 stacked saw drone through a breathing low-pass, and brown noise through a
 sweeping band-pass. Flares add a swept whoosh, a low swell and a scatter of
 crackle transients, front-loaded onto the impulsive phase. Everything routes

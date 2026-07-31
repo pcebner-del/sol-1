@@ -35,8 +35,16 @@ export class App {
     this._fpsAccum = 0;
     this._degradeChecked = false;
 
+    // Observing the canvas catches every reason its box can change — URL bar,
+    // orientation, split view — including the ones that never fire a window
+    // resize event.
+    if (typeof ResizeObserver !== 'undefined') {
+      this._ro = new ResizeObserver(() => this.resize());
+      this._ro.observe(this.canvas);
+    }
     window.addEventListener('resize', () => this.resize());
-    this.resize();
+    window.addEventListener('orientationchange', () => this.resize());
+    this.resize(true);
   }
 
   /* ---------------------------------------------------------------- setup */
@@ -218,9 +226,25 @@ export class App {
 
   /* ----------------------------------------------------------------- frame */
 
-  resize() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+  /**
+   * Measure the canvas, not the window.
+   *
+   * The canvas is sized entirely by CSS — 100% of an element that is 100dvh
+   * tall — and setSize() is called with updateStyle false, so JS never writes
+   * the canvas box. This used to read window.innerHeight instead, and on iOS
+   * those two disagree: dvh and innerHeight settle at different moments as the
+   * URL bar collapses and across an orientation change. Whenever they differ,
+   * the camera is set up for one shape while the canvas is another, and every
+   * sphere in the scene renders as an egg. Reading the element removes the
+   * question — the aspect is the canvas aspect by construction.
+   */
+  resize(force = false) {
+    const w = this.canvas.clientWidth || window.innerWidth;
+    const h = this.canvas.clientHeight || window.innerHeight;
+    if (!force && w === this._sizeW && h === this._sizeH) return;
+    this._sizeW = w;
+    this._sizeH = h;
+
     this.renderer.setPixelRatio(QUALITY.devicePixelRatio);
     this.renderer.setSize(w, h, false);
     this.composer.setSize(w, h);
@@ -319,7 +343,7 @@ export class App {
         this.bloom.strength = QUALITY.bloom.strength;
         this.bloom.radius = QUALITY.bloom.radius;
         this.bloom.threshold = QUALITY.bloom.threshold;
-        this.resize();
+        this.resize(true);
         this.emit('quality', QUALITY.tier);
       }
       this._degradeChecked = true;

@@ -139,6 +139,14 @@ through one bus, so the toggle and master fade govern all of it. **This is an
 artistic sonic interpretation, not a recording** — no NASA helioseismology data
 is used.
 
+The renderer takes its size from the canvas element, never from
+`window.innerWidth/innerHeight`. The canvas is sized entirely by CSS — 100% of
+a box that is `100dvh` tall — and on iOS `dvh` and `innerHeight` settle at
+different moments as the URL bar collapses and through an orientation change.
+Configuring the camera from one while the canvas is the other stretches every
+sphere in the scene into an egg. A `ResizeObserver` on the canvas catches every
+reason its box can change, including the ones that never fire a window resize.
+
 ## Camera ownership
 
 One rule: **exactly one system writes the camera per frame, and a scripted move

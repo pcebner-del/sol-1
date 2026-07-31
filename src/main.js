@@ -670,6 +670,9 @@ const hud = new HUD(document.getElementById('ui'), {
     }
     hud.setResetVisible(false);
     hud.hideCard();
+    // Reset means "back to how it started", and orbit is how it starts. MOVE
+    // is a deliberate excursion, so it shouldn't outlive the view it was for.
+    if (navMode !== 'orbit') setNavMode('orbit');
     const d = systemDistance();
     app.setDistanceLimits(5, d * 1.9);
     app.flyTo({

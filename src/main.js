@@ -242,7 +242,7 @@ function setMode(next, { silent = false } = {}) {
     cutaway.exit();
     flares.setVisible(true);
     const d = systemDistance();
-    app.setDistanceLimits(5, d * 1.9);
+    app.setDistanceLimits(5, d * systemZoomOut());
     app.flyTo({
       position: orbitPosition(d, 0.58),
       target: new THREE.Vector3(),
@@ -304,6 +304,15 @@ function orbitPosition(distance, elevation) {
  * a fifth the size it is in portrait, marooned beside the card. Pull in when
  * height is the scarce axis.
  */
+/**
+ * How far past the fitting distance the view may be pulled back. Labels are
+ * fixed-size DOM, so on a phone the system turns into a knot of stacked labels
+ * well before it does on a desktop. Keep the leash shorter there.
+ */
+function systemZoomOut() {
+  return isPhone() ? 1.45 : 1.9;
+}
+
 function followDistance(radius) {
   if (!isPhone() || window.innerHeight >= window.innerWidth) return Math.max(0.9, radius * 8.2);
   return Math.max(0.58, radius * 5.1);
@@ -367,7 +376,7 @@ function followPlanet(index) {
     .addScaledVector(tangent, dist * 0.58)
     .add(new THREE.Vector3(0, dist * 0.3, 0));
 
-  app.setDistanceLimits(p.radius * 1.8, systemDistance() * 1.9);
+  app.setDistanceLimits(p.radius * 1.8, systemDistance() * systemZoomOut());
   app.flyToTracked({
     trackFn: getEarthLike,
     offset,
@@ -410,7 +419,7 @@ function showAsteroid() {
     .addScaledVector(outward, -d * 0.6)
     .addScaledVector(tangent, d * 0.6)
     .add(new THREE.Vector3(0, d * 0.3, 0));
-  app.setDistanceLimits(ASTEROID.radius * 2, systemDistance() * 1.9);
+  app.setDistanceLimits(ASTEROID.radius * 2, systemDistance() * systemZoomOut());
   app.flyToTracked({
     trackFn: get,
     offset,
@@ -480,7 +489,7 @@ function beginEclipse() {
   system.setEclipseSlide(1);
   system.update(0, app.time, app.camera);
 
-  app.setDistanceLimits(0.05, systemDistance() * 1.9);
+  app.setDistanceLimits(0.05, systemDistance() * systemZoomOut());
   app.flyToTracked({
     trackFn: (out) => system.eclipseVantage(out),
     offset: new THREE.Vector3(),
@@ -523,7 +532,7 @@ function finishEclipse() {
   app.lockCamera(false);
 
   const d = systemDistance();
-  app.setDistanceLimits(5, d * 1.9);
+  app.setDistanceLimits(5, d * systemZoomOut());
   app.flyTo({
     position: orbitPosition(d, 0.58),
     target: new THREE.Vector3(),
@@ -714,7 +723,7 @@ const hud = new HUD(document.getElementById('ui'), {
     // is a deliberate excursion, so it shouldn't outlive the view it was for.
     if (navMode !== 'orbit') setNavMode('orbit');
     const d = systemDistance();
-    app.setDistanceLimits(5, d * 1.9);
+    app.setDistanceLimits(5, d * systemZoomOut());
     app.flyTo({
       position: orbitPosition(d, 0.58),
       target: new THREE.Vector3(),

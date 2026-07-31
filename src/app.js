@@ -192,6 +192,18 @@ export class App {
   _endTween(completed) {
     const done = this.tween?.onDone;
     this.tween = null;
+
+    // Restore the leash however the move ended. flyTo widens it so a flight is
+    // never clamped mid-air, and this used to be undone only when a tween ran
+    // to completion — but any touch cancels a tween, so grabbing the view
+    // during the three-second fly-out left minDistance 0.01 / maxDistance 4000
+    // in place for good. You could then pull back until the whole solar system
+    // was fourteen pixels wide.
+    if (this._limits) {
+      this.controls.minDistance = this._limits.min;
+      this.controls.maxDistance = this._limits.max;
+    }
+
     if (!this.camLocked) this.controls.enabled = true;
     // Don't let auto-rotate snap straight back on the frame we land.
     this._nudgeAutoRotate();
@@ -309,13 +321,7 @@ export class App {
       }
       this.camera.position.lerpVectors(tw.fromPos, tw.toPos, e);
       this.controls.target.lerpVectors(tw.fromTarget, tw.toTarget, e);
-      if (tw.t >= 1) {
-        if (this._limits) {
-          this.controls.minDistance = this._limits.min;
-          this.controls.maxDistance = this._limits.max;
-        }
-        this._endTween(true);
-      }
+      if (tw.t >= 1) this._endTween(true);
     }
 
     // Modules run after the controls, so trackers and the totality lock also

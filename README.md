@@ -166,6 +166,14 @@ Configuring the camera from one while the canvas is the other stretches every
 sphere in the scene into an egg. A `ResizeObserver` on the canvas catches every
 reason its box can change, including the ones that never fire a window resize.
 
+`flyTo` widens the distance limits so a flight is never clamped mid-air, and
+`_endTween` puts them back **however the move ended**. Restoring only on
+completion meant any touch — which cancels a tween by design — left the travel
+limits in place for good, and the view could then be pulled back until the
+whole solar system was fourteen pixels across. One consequence worth knowing:
+interrupting a *mode change* now clamps to the destination mode's range rather
+than leaving the camera stranded wherever the flight was abandoned.
+
 ## Camera ownership
 
 One rule: **exactly one system writes the camera per frame, and a scripted move

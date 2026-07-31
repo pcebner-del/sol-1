@@ -567,7 +567,10 @@ const hud = new HUD(document.getElementById('ui'), {
     if (mode === 'section') setMode('surface');
   },
   onAudio: () => {
+    // toggle() calls resume() synchronously inside this click handler, which
+    // is activation WebKit does accept — so if it took, stop auto-arming.
     const on = audio.toggle();
+    if (audio.running) releaseArm();
     hud.setAudio(on);
     hud.log(on ? 'AUDIO BED ENGAGED · SYNTHESISED' : 'AUDIO BED MUTED');
   },
@@ -630,30 +633,35 @@ setNavMode('orbit');
  */
 hud.setAudio(true);
 
-// touchend and click are included because Safari is pickier about what counts
-// as user activation for audio than the pointer events alone suggest.
-const ARM_EVENTS = ['pointerdown', 'touchend', 'click', 'keydown'];
+// WebKit is fussier about what counts as user activation for audio than the
+// pointer events alone suggest, and a drag is not the same thing as a tap, so
+// cast a wide net and let every one of them try.
+const ARM_EVENTS = ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown'];
 let audioArmed = false;
-let audioArming = false;
 
 function releaseArm() {
+  if (audioArmed) return;
   audioArmed = true;
   for (const evt of ARM_EVENTS) window.removeEventListener(evt, armAudio, true);
 }
 
-function armAudio() {
-  if (audioArmed || audioArming) return;
-  audioArming = true;
+function armAudio(e) {
+  if (audioArmed) return;
 
-  // Only stand down once the context is confirmed running. The old version
-  // unhooked itself on the first attempt, so a gesture Safari declined left
-  // the page permanently silent with the panel still claiming SOUND ON.
+  // Let the sound button speak for itself. Auto-arming on the same gesture
+  // would turn audio on and the button's own handler would turn it straight
+  // back off, landing on the opposite of what was pressed.
+  if (e?.target?.closest?.('.audio-toggle')) return;
+
+  // Deliberately no in-flight guard. WebKit grants audio activation on some
+  // gestures and not others — dragging the canvas is one it refuses — and the
+  // events it does accept arrive while the pointerdown attempt is still
+  // resolving its resume(). Skipping those because an attempt was already in
+  // flight threw away exactly the gestures that work, which is why dragging
+  // the sun never started the sound but tapping a flare did. start() is
+  // idempotent, so letting every gesture have a go is both safe and the point.
   audio.start().then((running) => {
-    audioArming = false;
-    if (!running) {
-      hud.setAudio(false);
-      return;
-    }
+    if (!running || audioArmed) return;
     releaseArm();
     hud.setAudio(audio.on);
     if (audio.on) hud.log('AUDIO BED ENGAGED · SYNTHESISED');

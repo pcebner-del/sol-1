@@ -192,6 +192,11 @@ export class SunAudio {
     return this.on;
   }
 
+  /** Whether sound is genuinely coming out, as opposed to merely intended. */
+  get running() {
+    return this.ctx?.state === 'running';
+  }
+
   /**
    * Bring the bed up on a user gesture. Unlike toggle() this is idempotent, so
    * the auto-arm can safely try again: on iOS the first gesture often hands

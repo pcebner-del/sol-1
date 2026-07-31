@@ -121,7 +121,11 @@ is stylised: Ceres does outgas water vapour, but not as a persistent visible tai
 **Audio** — On by default. Browsers won't let an AudioContext start without a
 gesture, so it arms on the first interaction *anywhere* rather than making you
 hunt for the toggle. Arming only stands down once the context is confirmed
-`running`; a gesture Safari declines leaves the listener in place to try again,
+`running`; a gesture Safari declines leaves the listener in place to try again.
+Every gesture gets its own attempt, including ones arriving while an earlier
+attempt is still resolving — WebKit accepts some gestures and refuses others
+(a drag is not a tap), and the events it does accept land while the pointerdown
+attempt is still in flight,
 and the panel reports the real state rather than the intended one. The session
 is declared `playback` via `navigator.audioSession`, without which iOS silences
 Web Audio whenever the ringer switch is set to silent — the reason sound could

@@ -84,6 +84,13 @@ in that planet's *rotating* frame, so the sun stays where it was rather than
 swinging round behind it. Once the sun shrinks to a few pixels a distance-scaled
 glare card takes over so it still reads as a blazing point source.
 
+The card dodge is re-solved every frame from the camera's current distance,
+not frozen when the fly-in ends. A fixed world-space offset subtends a larger
+and larger angle as you zoom in, which swept the body clean out of frame — on
+a phone in landscape the planet left the screen before it ever got big. Solved
+per frame, the body holds the same place in the frame at any zoom, and the
+dodge eases away to nothing once the card is dismissed.
+
 **Planet surfaces** — One shader with five compile-time variants, so a gas giant
 never pays for crater code:
 

@@ -40,6 +40,7 @@ const moonLabels = new LabelLayer(overlay);
 const layerLabels = new LabelLayer(overlay);
 
 const _tmp = new THREE.Vector3();
+let clearanceAmt = 1;
 const _eclTarget = new THREE.Vector3();
 const _eclScratch = new THREE.Vector3();
 
@@ -134,14 +135,14 @@ const Y_AXIS = new THREE.Vector3(0, 1, 0);
  */
 let track = null;
 
-function setTrack(getFn, rotateFrame = true) {
+function setTrack(getFn, rotateFrame = true, clearance = false) {
   if (!getFn) {
     track = null;
     return;
   }
   const p = new THREE.Vector3();
   getFn(p);
-  track = { get: getFn, rotateFrame, prev: p.clone(), angle: Math.atan2(p.x, p.z) };
+  track = { get: getFn, rotateFrame, clearance, prev: p.clone(), angle: Math.atan2(p.x, p.z) };
 }
 
 const fade = {
@@ -297,6 +298,17 @@ function orbitPosition(distance, elevation) {
  * portrait, beside it in landscape. Returns null on larger screens, where the
  * card sits in the margin and there is nothing to dodge.
  */
+/**
+ * How far back to sit from a body. The multiple is tuned for a tall frame; a
+ * phone in landscape is only ~390px high, so the same multiple left the planet
+ * a fifth the size it is in portrait, marooned beside the card. Pull in when
+ * height is the scarce axis.
+ */
+function followDistance(radius) {
+  if (!isPhone() || window.innerHeight >= window.innerWidth) return Math.max(0.9, radius * 8.2);
+  return Math.max(0.58, radius * 5.1);
+}
+
 function cardClearance(offset, dist) {
   if (!isPhone()) return null;
 
@@ -327,9 +339,14 @@ function cardClearance(offset, dist) {
  */
 let trackingBody = false;
 
-/** Flares belong to the Sun; hide the row whenever a body has the camera. */
+/**
+ * Chrome that only makes sense while looking at the Sun: the flare row and the
+ * stellar-telemetry chip. Both step aside once a body has the camera.
+ */
 function syncFlares() {
-  hud.setFlaresVisible(!(mode === 'system' && trackingBody));
+  const onBody = mode === 'system' && trackingBody;
+  hud.setFlaresVisible(!onBody);
+  hud.setDataVisible(!onBody);
 }
 
 function followPlanet(index) {
@@ -344,7 +361,7 @@ function followPlanet(index) {
   // not a black disc, and off to one side so the moons aren't edge-on.
   const outward = _tmp.clone().normalize();
   const tangent = new THREE.Vector3(-outward.z, 0, outward.x);
-  const dist = Math.max(0.9, p.radius * 8.2);
+  const dist = followDistance(p.radius);
   const offset = new THREE.Vector3()
     .addScaledVector(outward, -dist * 0.62)
     .addScaledVector(tangent, dist * 0.58)
@@ -357,7 +374,7 @@ function followPlanet(index) {
     duration: 2.4,
     ease: easeOutQuint,
     targetOffset: cardClearance(offset, dist),
-    onDone: () => setTrack(getEarthLike, true),
+    onDone: () => setTrack(getEarthLike, true, true),
   });
   trackingBody = true;
   hud.setResetVisible(true);
@@ -388,7 +405,7 @@ function showAsteroid() {
   syncFlares();
   const outward = _tmp.clone().normalize();
   const tangent = new THREE.Vector3(-outward.z, 0, outward.x);
-  const d = Math.max(0.9, ASTEROID.radius * 20);
+  const d = Math.max(followDistance(ASTEROID.radius), ASTEROID.radius * 12);
   const offset = new THREE.Vector3()
     .addScaledVector(outward, -d * 0.6)
     .addScaledVector(tangent, d * 0.6)
@@ -400,7 +417,7 @@ function showAsteroid() {
     duration: 2.4,
     ease: easeOutQuint,
     targetOffset: cardClearance(offset, d),
-    onDone: () => setTrack(get, true),
+    onDone: () => setTrack(get, true, true),
   });
   hud.showCard({
     name: ASTEROID.name,
@@ -905,10 +922,24 @@ const controller = {
         camOff.applyAxisAngle(Y_AXIS, dAng);
         tgtOff.applyAxisAngle(Y_AXIS, dAng);
       }
+      if (track.clearance) {
+        // Re-solve the card dodge from the distance we are at *now*. Frozen at
+        // fly-in it is a fixed world offset, so zooming in makes it subtend an
+        // ever-larger angle and sweeps the body out of frame — which read as
+        // "the planet won't zoom, it just stays small". Recomputed, the body
+        // holds the same place in frame at every zoom level.
+        const c = cardClearance(camOff, camOff.length());
+        if (c) tgtOff.copy(c).multiplyScalar(clearanceAmt);
+        else tgtOff.set(0, 0, 0);
+      }
       camera.position.copy(_tmp).add(camOff);
       app.controls.target.copy(_tmp).add(tgtOff);
       track.prev.copy(_tmp);
     }
+
+    // With the card dismissed there is nothing left to dodge, so the body
+    // eases back to the middle and gets the whole frame.
+    clearanceAmt += ((hud.cardOpen ? 1 : 0) - clearanceAmt) * Math.min(1, dt * 3.2);
 
     const w = window.innerWidth;
     const h = window.innerHeight;

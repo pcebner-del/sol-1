@@ -310,8 +310,24 @@ export class HUD {
    * while the camera is parked on a planet. On a phone it is also the thing
    * holding the planet card up over the body it describes.
    */
+  /** Whether an info card is currently on screen. */
+  get cardOpen() {
+    return this.el.card.classList.contains('is-open');
+  }
+
   setFlaresVisible(v) {
     this.el.flarepanel.hidden = !v;
+  }
+
+  /**
+   * The DATA chip is stellar telemetry, which has nothing to say while the
+   * camera is parked on a planet. Hidden there, and the sheet closed if it
+   * happened to be open when you flew off.
+   */
+  setDataVisible(v) {
+    const chip = this.root.querySelector('.dock-btn[data-sheet="data"]');
+    if (chip) chip.hidden = !v;
+    if (!v && this.sheet === 'data') this.setSheet(null);
   }
 
   setEclipseVisible(v) {

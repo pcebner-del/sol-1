@@ -29,7 +29,15 @@ magnetic filaments underneath. A quadratic limb-darkening law
 (`0.30 + 0.94μ − 0.24μ²`) dims the edge the way the real disc does. Sunspots are a sparse low-frequency
 field masked to the active latitude bands either side of the equator, with dark
 umbrae, filamented penumbrae and bright faculae around them. The whole texture
-shears with latitude, so the equator laps the poles.
+shears with latitude, so the equator leads the poles — but by a *bounded*
+angle, recomputed on the CPU each frame rather than accumulated in the shader.
+A latitude-dependent angle that grows without limit winds a static noise field
+up like a spring, and since the twist and the feature size both scale as
+1/frequency, every layer smears at the same rate: after half an hour each
+granule is stretched across ~80 granule widths and the disc collapses into
+horizontal ribbons. The real photosphere never winds up either — granules live
+about ten minutes and differential rotation takes a month to lap, so a cell is
+destroyed and reformed long before the shear can stretch it.
 
 **Corona** — Not a shell. For each pixel the shader solves for the camera ray's
 closest approach to the sun and evaluates an analytic three-term exponential

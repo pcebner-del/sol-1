@@ -27,6 +27,9 @@ precision highp float;
 ${NOISE_GLSL}
 
 uniform float uTime;
+uniform float uSpin;
+uniform float uDiff;
+uniform float uSpotSpin;
 uniform float uActivity;      // 0..1, spikes when flares fire
 uniform float uBrightness;
 uniform float uSpots;         // sunspot strength
@@ -70,9 +73,24 @@ void main(){
 
   float t = uTime;
 
-  // Differential rotation — the equator laps the poles.
+  // Differential rotation — the equator leads the poles.
+  //
+  // This was t * (0.030 + 0.024 * (1.0 - lat*lat)): a latitude-dependent
+  // angle with nothing bounding it. Applied to a *static* noise field that
+  // winds the surface up like a spring. The twist between two latitudes one
+  // feature apart grows as 0.048 * t * lat and — because both the feature size
+  // and the twist scale as 1/frequency — that ratio is the same for every
+  // layer. By half an hour it is ~80, so each granule is smeared across eighty
+  // granule widths and the photosphere collapses into horizontal ribbons.
+  //
+  // The real photosphere never winds up: granules live ~10 minutes while
+  // differential rotation takes about a month to lap, so a cell is destroyed
+  // and reformed long before the shear can stretch it. So the differential
+  // part is bounded here and the rigid spin carries the visible rotation.
+  // Both angles arrive pre-wrapped from the CPU, computed in double precision,
+  // so neither grows large enough to lose float precision either.
   float lat = dir.y;
-  float shear = t * (0.030 + 0.024 * (1.0 - lat * lat));
+  float shear = uSpin + uDiff * (1.0 - lat * lat);
   vec3 p = rotY(dir, shear);
 
   // Domain warp drives the big convective churn.
@@ -125,7 +143,7 @@ void main(){
 
   // Sunspot groups: rare, small, and confined to the active latitude bands
   // either side of the equator (the butterfly diagram).
-  vec3 sp = rotY(dir, t * 0.028);
+  vec3 sp = rotY(dir, uSpotSpin);
   float latBand = exp(-pow((abs(dir.y) - 0.26) / 0.19, 2.0));
   float spotField = fbm(sp * 5.0 + vec3(3.1, t * 0.012, 0.0), 4, 2.0, 0.5) + 0.20 * latBand;
   float penTex = turbulence(sp * 58.0 + vec3(0.0, t * 0.03, 0.0), 3, 2.0, 0.5) - 0.70;

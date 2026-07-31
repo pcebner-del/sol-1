@@ -11,6 +11,8 @@ import {
   GLARE_FRAG,
 } from '../shaders/sun.glsl.js';
 
+const TAU = Math.PI * 2;
+
 const CORONA_RADIUS = 7.0;
 
 export class Sun {
@@ -46,6 +48,9 @@ export class Sun {
       },
       uniforms: {
         uTime: { value: 0 },
+        uSpin: { value: 0 },
+        uDiff: { value: 0 },
+        uSpotSpin: { value: 0 },
         uActivity: { value: 0 },
         uBrightness: { value: 0.86 },
         uSpots: { value: 1.0 },
@@ -221,6 +226,17 @@ export class Sun {
       this.glare.scale.setScalar(dist * 0.16);
       this.glare.quaternion.copy(camera.quaternion);
     }
+
+    // Surface rotation angles are derived here rather than in the shader, in
+    // double precision, so they stay bounded however long the tab is open.
+    // The rigid spin wraps (rotation is exactly 2pi-periodic, so this is
+    // lossless) and the differential term is a bounded quasi-periodic wander
+    // instead of an angle that accumulates forever — see the long note in the
+    // surface fragment shader for why that distinction matters.
+    const su = this.surfaceMat.uniforms;
+    su.uSpin.value = (time * 0.030) % TAU;
+    su.uSpotSpin.value = (time * 0.028) % TAU;
+    su.uDiff.value = 0.28 * Math.sin(time * 0.043) + 0.16 * Math.sin(time * 0.0177);
 
     for (const m of this.materials) {
       if (m.uniforms.uTime) m.uniforms.uTime.value = time;

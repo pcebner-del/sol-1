@@ -956,11 +956,17 @@ const controller = {
     // Phone collapses the side panels into chips, so the only reserved bands
     // are the title strip and the dock + flare row along the bottom edge.
     const landscape = h < 460 && w > h;
+    // These bound where a label's *anchor* may sit, but the box hangs below it,
+    // so each figure is the chrome it has to clear plus a label's own height.
+    // Measured: the flare row leaves 71px in phone landscape, the card, dock
+    // and flare row together leave 124px in portrait, and the flare panel
+    // leaves 144px on a desktop. Labels are ~22px tall on a phone and ~33px
+    // where they keep their subtitle.
     const insets = landscape
-      ? { top: 40, bottom: 68 }
+      ? { top: 40, bottom: 95 }
       : w < 560
-        ? { top: 76, bottom: 128 }
-        : { top: 60, bottom: 62 };
+        ? { top: 76, bottom: 156 }
+        : { top: 60, bottom: 180 };
 
     // Planet labels fade in as the system opens up.
     const dist = camera.position.length();

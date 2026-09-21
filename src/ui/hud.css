@@ -583,6 +583,11 @@ button,
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   box-shadow: 0 24px 60px -30px #000;
+  /* A card with a lot of readouts would otherwise grow off the top and bottom
+     of the window; there is no height bound on this breakpoint otherwise. */
+  max-height: calc(100dvh - 2 * var(--pad) - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0.45s;

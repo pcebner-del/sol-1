@@ -1,8 +1,9 @@
 import * as THREE from 'three';
-import { PLANETS, ASTEROID } from '../data.js';
+import { PLANETS, ASTEROID, ROADSTER } from '../data.js';
 import { QUALITY } from '../quality.js';
 import { buildEarthTexture } from './earthMap.js';
 import { Asteroid } from './asteroid.js';
+import { Roadster } from './roadster.js';
 import {
   PLANET_VERT,
   PLANET_FRAG,
@@ -53,6 +54,10 @@ export class SolarSystem {
     // --- asteroid
     this.asteroid = new Asteroid(ASTEROID, this.bodyGeo);
     this.group.add(this.asteroid.group);
+
+    // --- Starman, on the one genuinely elliptical orbit in the scene
+    this.roadster = new Roadster(ROADSTER);
+    this.group.add(this.roadster.group);
 
     this.earthIndex = PLANETS.findIndex((p) => p.type === 'earth');
     const earth = this.planets[this.earthIndex];
@@ -282,6 +287,7 @@ export class SolarSystem {
     }
     for (const m of this.lineMats) m.opacity = v * 0.24;
     this.asteroid.setOpacity(v);
+    this.roadster.setOpacity(v);
   }
 
   /* ---------------------------------------------------------------- eclipse */
@@ -414,6 +420,7 @@ export class SolarSystem {
     else if (this.earthMoon?._saved) this._restoreMoon();
 
     this.asteroid.update(dt, time, camera);
+    this.roadster.update(dt, time, camera);
 
     for (const m of this.materials) {
       if (m.uniforms.uTime) m.uniforms.uTime.value = time;

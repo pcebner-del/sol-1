@@ -196,7 +196,16 @@ function apply(placed) {
  */
 function deCollide(items, h, insets) {
   if (items.length < 2) return;
-  const GAP = 34;
+
+  // Tighten the spacing rather than overflow when there are more labels than
+  // the band can hold at the comfortable gap. A phone in landscape leaves
+  // about 280px between the title strip and the flare row, which ten labels
+  // cannot fill at 34px each — without this the stack runs off the bottom and
+  // into the controls. Floored so labels are never actually on top of
+  // each other.
+  const band = h - insets.top - insets.bottom;
+  const GAP = Math.max(22, Math.min(34, band / (items.length - 1)));
+
   items.sort((a, b) => a._y - b._y);
 
   for (let i = 1; i < items.length; i++) {

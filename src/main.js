@@ -10,9 +10,10 @@ import { SolarSystem } from './scene/solarSystem.js';
 import { FlareSystem } from './scene/flares.js';
 import { Cutaway } from './scene/cutaway.js';
 import { SunAudio } from './audio/sunAudio.js';
-import { LAYERS, PLANETS, SUNSPOT_INFO, ASTEROID, ECLIPSE_INFO } from './data.js';
+import { LAYERS, PLANETS, SUNSPOT_INFO, ASTEROID, ECLIPSE_INFO, ROADSTER } from './data.js';
 import { QUALITY } from './quality.js';
 import { distanceFromSun, fromKm } from './format.js';
+import { roadsterState, roadsterEarthDistance } from './orbit.js';
 
 const app = new App(document.getElementById('scene'));
 const overlay = document.getElementById('overlay');
@@ -21,6 +22,9 @@ installGrain(document.getElementById('grain'));
 /* ------------------------------------------------------------ scene setup */
 
 const system = new SolarSystem();
+// Start Starman where it actually is today, not at an arbitrary phase. Only
+// its rate is compressed after this, to keep pace with the stylised planets.
+system.roadster.setMeanAnomaly(roadsterState().M);
 app.scene.add(system.group);
 app.modules.push(system);
 
@@ -86,6 +90,21 @@ const objectLabels = new LabelLayer(overlay);
   it.anchor = (out) => {
     system.asteroid.worldPosition(out);
     out.y += ASTEROID.radius * 2.4 + 0.05;
+    return out;
+  };
+}
+
+{
+  const it = objectLabels.add({
+    id: 'roadster',
+    title: ROADSTER.name,
+    sub: ROADSTER.kind,
+    className: 'object-label',
+    onClick: () => showRoadster(),
+  });
+  it.anchor = (out) => {
+    system.roadster.worldPosition(out);
+    out.y += ROADSTER.size * 0.9 + 0.05;
     return out;
   };
 }
@@ -403,6 +422,73 @@ function followPlanet(index) {
     ],
   });
   hud.log(`TRACKING ${p.name}`);
+}
+
+/**
+ * Starman. The card's top line is computed live from the JPL elements rather
+ * than written down, so it stays true as the date moves.
+ */
+function showRoadster() {
+  const get = (out) => system.roadster.worldPosition(out);
+  get(_tmp);
+  followIndex = -1;
+  trackingBody = true;
+  hud.setResetVisible(true);
+  syncFlares();
+
+  const outward = _tmp.clone().normalize();
+  const tangent = new THREE.Vector3(-outward.z, 0, outward.x);
+  const landscape = window.innerWidth > window.innerHeight;
+  const d = ROADSTER.size * (isPhone() && landscape ? ROADSTER.followSize * 0.72 : ROADSTER.followSize);
+  const offset = new THREE.Vector3()
+    .addScaledVector(outward, -d * 0.58)
+    .addScaledVector(tangent, d * 0.62)
+    .add(new THREE.Vector3(0, d * 0.34, 0));
+
+  app.setDistanceLimits(ROADSTER.size * 0.75, systemDistance() * systemZoomOut());
+  app.flyToTracked({
+    trackFn: get,
+    offset,
+    duration: 2.4,
+    ease: easeOutQuint,
+    targetOffset: cardClearance(offset, d),
+    onDone: () => setTrack(get, true, true),
+  });
+
+  const st = roadsterState();
+  const km = st.r * 149597870.7;
+  const earthKm = roadsterEarthDistance() * 149597870.7;
+  const peri = new Date(Date.now() + st.daysToPerihelion * 86400000);
+  const when = peri.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }).toUpperCase();
+
+  hud.showCard({
+    name: ROADSTER.name,
+    desc:
+      `${ROADSTER.desc}` +
+      `<br><span class="card-note">${ROADSTER.why}</span>` +
+      `<br><span class="card-note">${ROADSTER.cargo}</span>` +
+      `<br><span class="card-note">${ROADSTER.decay}</span>` +
+      `<br><span class="card-note">Its orbit is drawn to the same compressed scale as the planets\u2019 and sped up to match them, so where the car sits in this view is stylised. The readings below are not \u2014 they are worked out live from JPL\u2019s orbital elements for today.</span>`,
+    accent: '#ff6a52',
+    stats: [
+      ['RIGHT NOW', `${st.r.toFixed(2)} AU from the Sun`],
+      ['', `${(km / 1e6).toFixed(1)} million km`],
+      ['FROM EARTH', `${(earthKm / 1e6).toFixed(1)} million km`],
+      ['HEADING', st.inbound ? 'Inbound from aphelion' : 'Outbound from perihelion'],
+      ['NEXT PERIHELION', when],
+      ['LAUNCHED', ROADSTER.launched],
+      ['ON', ROADSTER.vehicle],
+      ['ORBITAL PERIOD', `${Math.round(ROADSTER.periodDays)} days`],
+      ['PERIHELION', `${ROADSTER.perihelionAU.toFixed(3)} AU \u00b7 inside Earth\u2019s orbit`],
+      ['APHELION', `${ROADSTER.aphelionAU.toFixed(3)} AU \u00b7 past Mars\u2019s orbit`],
+      ['INCLINATION', ROADSTER.inclinationText],
+      ['PASSED MARS', ROADSTER.passedMars],
+      ['NEXT EARTH PASS', ROADSTER.nextEarth],
+      ['LONG ODDS', ROADSTER.odds],
+      ['TRACKED AS', 'JPL Horizons \u2212143205'],
+    ],
+  });
+  hud.log(`TRACKING ${ROADSTER.name} \u00b7 TESLA ROADSTER`);
 }
 
 function showAsteroid() {
@@ -841,7 +927,7 @@ app.canvas.addEventListener('pointermove', (e) => {
   // cursor. Layer cards are driven purely by their own labels.
   if (mode === 'system') {
     raycaster.setFromCamera(pointer, app.camera);
-    const targets = [...system.meshes, system.asteroid.mesh];
+    const targets = [...system.meshes, system.asteroid.mesh, ...system.roadster.hitMeshes];
     const hit = raycaster.intersectObjects(targets, false)[0];
     app.canvas.style.cursor = hit ? 'pointer' : '';
   } else {
@@ -870,10 +956,11 @@ app.canvas.addEventListener('pointerup', (e) => {
   raycaster.setFromCamera(pointer, app.camera);
 
   if (mode === 'system') {
-    const targets = [...system.meshes, system.asteroid.mesh];
+    const targets = [...system.meshes, system.asteroid.mesh, ...system.roadster.hitMeshes];
     const hit = raycaster.intersectObjects(targets, false)[0];
     if (hit) {
       if (hit.object.userData.asteroid) showAsteroid();
+      else if (hit.object.userData.roadster) showRoadster();
       else {
         const idx = system.meshes.indexOf(hit.object);
         if (idx >= 0) followPlanet(idx);
@@ -956,11 +1043,13 @@ const controller = {
     // Phone collapses the side panels into chips, so the only reserved bands
     // are the title strip and the dock + flare row along the bottom edge.
     const landscape = h < 460 && w > h;
+    // The bottom figure has to clear the chrome *plus* a label's own height:
+    // these position a label's anchor, and the box hangs about 22px below it.
     const insets = landscape
-      ? { top: 40, bottom: 68 }
+      ? { top: 40, bottom: 92 }
       : w < 560
-        ? { top: 76, bottom: 128 }
-        : { top: 60, bottom: 62 };
+        ? { top: 76, bottom: 152 }
+        : { top: 60, bottom: 86 };
 
     // Planet labels fade in as the system opens up.
     const dist = camera.position.length();

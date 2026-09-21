@@ -132,6 +132,27 @@ the photosphere sitting next to it. The eclipsed state is persistent: only the
 slide-in and slide-out are animated, so nothing times out while you read the
 card. END ECLIPSE slides the Moon back out and returns to the wide shot.
 
+**Starman** — Elon Musk's Tesla Roadster, the mass simulator thrown into solar
+orbit by the first Falcon Heavy in February 2018, on the one genuinely
+elliptical orbit in the scene. The elements are the real ones — JPL Horizons
+osculating elements for object \u2212143205 at epoch JD 2461302.5 \u2014 and a
+Kepler solve against them drives the card's live readout: distance from the
+Sun, distance from Earth, whether it is running in or out, and the date of the
+next perihelion. The orbit *drawn* is compressed on the same radial scale as
+the planets, so it keeps its shape (crossing Earth's ring at perihelion,
+reaching past Mars at aphelion) without the inner system collapsing, and it is
+sped up to match them; the card says so rather than implying the car on screen
+is where the car is.
+
+The body is lofted rather than extruded: seventeen cross-sections down its
+length, each a superellipse with its own width, deck height and squareness,
+stitched into a surface. Extruding one silhouette gives flat slab flanks, and a
+car needs to curve in two directions at once \u2014 the width swells over each
+axle and pinches at the waist between them, which is most of what makes a shape
+read as a car. Tyres are turned on a lathe so they have real sidewalls. The
+paint gets two specular lobes, a broad one and a tight clearcoat, over a hard
+terminator: in a vacuum there is one light source and no fill.
+
 **Ceres** — The largest body in the asteroid belt, on its own inclined orbit
 between Mars and Jupiter, with a cratered icy surface and a dust trail. Clickable
 for a card covering what it is, its 4.6-year orbit and its composition. The trail

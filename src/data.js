@@ -300,3 +300,62 @@ export const ECLIPSE_INFO = {
     ['WHAT YOU SEE', 'Corona, prominences, and the horizon lit all round'],
   ],
 };
+
+/**
+ * Elon Musk's Tesla Roadster, the dummy payload of the first Falcon Heavy.
+ *
+ * The orbital elements are the real ones: JPL Horizons osculating elements for
+ * object -143205 (SpaceX Roadster), heliocentric, ecliptic J2000, at epoch
+ * JD 2461302.5 (2026-09-19 TDB). They drive the live readout in the card. The
+ * orbit *drawn* in the scene is compressed on the same radial scale as the
+ * planets, so it keeps its shape — crossing Earth's ring at perihelion,
+ * reaching past Mars at aphelion — without the inner system collapsing.
+ */
+export const ROADSTER = {
+  name: 'STARMAN',
+  kind: 'Tesla Roadster · Falcon Heavy test payload',
+  size: 0.26,          // scene units, nose to tail — a deliberate exaggeration
+  followSize: 4.3,     // multiples of that length to sit back when tracking
+
+  // JPL Horizons, object -143205, epoch JD 2461302.5 (2026-09-19 TDB).
+  elements: {
+    epochJD: 2461302.5,
+    a: 1.325282785724952,      // AU
+    e: 0.2559431977004283,
+    i: 1.074791897978510,      // degrees, to the ecliptic
+    node: 316.8730122426341,   // longitude of ascending node, degrees
+    peri: 177.7859072410449,   // argument of perihelion, degrees
+    M0: 234.5613385419072,     // mean anomaly at epoch, degrees
+    n: 0.6460129716962592,     // mean motion, degrees/day
+  },
+
+  perihelionAU: 0.9860856716891764,
+  aphelionAU: 1.664479899760728,
+  periodDays: 557.2643519134534,
+  speed: 365.25 / 557.2643519134534,   // relative to Earth, for the scene rate
+
+  launched: '6 Feb 2018 · 20:45 UTC',
+  vehicle: 'Falcon Heavy FH-001 · Kennedy Space Center LC-39A',
+  inclinationText: '1.07\u00b0 to the ecliptic',
+
+  desc:
+    'A cherry-red Tesla Roadster with a mannequin in a SpaceX pressure suit at the wheel, thrown into orbit around the Sun on the first flight of Falcon Heavy. It is still out there, and its orbit is tracked by JPL like any other object in the solar system.',
+
+  why:
+    'A maiden rocket flight carries a mass simulator rather than a real satellite, because it may well not survive. That ballast is normally concrete or steel blocks; Musk sent his own car instead, on the grounds that the boring option would be a waste of the occasion.',
+
+  cargo:
+    'A towel and a dashboard reading DON\u2019T PANIC, a copy of The Hitchhiker\u2019s Guide to the Galaxy, a Hot Wheels Roadster with its own tiny Starman, a plaque carrying the names of the SpaceX staff who built the rocket, Asimov\u2019s Foundation trilogy etched on a quartz disc, and a circuit board reading \u201cMade on Earth by humans\u201d. The stereo was left looping Bowie\u2019s Space Oddity \u2014 in a vacuum, to nobody.',
+
+  fate:
+    'It can never actually reach Mars. At 1.07\u00b0 its orbit is tilted too little to cross Mars\u2019s, so it only ever passes the planet\u2019s distance, never the planet.',
+
+  decay:
+    'Unshielded, the paint, leather and tyres will have been broken up by ultraviolet light and micrometeoroids within about a year of launch. The aluminium frame and carbon fibre last far longer \u2014 what is out there now is, in effect, a metal sculpture of a car.',
+
+  passedMars: 'Oct 2020 \u00b7 about 8 million km',
+  nextEarth: '2047 \u00b7 about 5 million km',
+  odds: '~6% it hits Earth, 2.5% Venus, within 3 Myr',
+
+  spin: '4.76 min per rotation',
+};

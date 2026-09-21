@@ -82,7 +82,13 @@ orbital rates are compressed from the true period ratios (`period^0.45`) so the
 inner planets don't blur past. Click any planet to track it — the camera rides
 in that planet's *rotating* frame, so the sun stays where it was rather than
 swinging round behind it. Once the sun shrinks to a few pixels a distance-scaled
-glare card takes over so it still reads as a blazing point source.
+glare card takes over so it still reads as a blazing point source. The card
+draws its own halo rather than leaning on bloom to spread a bright point for
+it, and is held just under the bloom threshold: a source a few pixels across
+goes through the pyramid and comes back as a bilinear tent — a soft square —
+and the pass weights its coarsest mip, a 32x upsample, heaviest of all. That
+was the box around the Sun in the wide shot. The card's shape is round by
+construction, clipped to the inscribed circle and faded to zero at its rim.
 
 The card dodge is re-solved every frame from the camera's current distance,
 not frozen when the fly-in ends. A fixed world-space offset subtends a larger

@@ -370,8 +370,13 @@ void main(){
   float r = length(c) * 2.0;
   if (r > 1.0) discard;
 
+  // The halo carries the glow itself rather than leaning on bloom to spread a
+  // bright point for it. Bloom blurs through a mip pyramid and upsamples
+  // bilinearly, so a source a few pixels across comes back as a tent — a soft
+  // square — and it weights its coarsest mip, a 32x upsample, the heaviest of
+  // all. That was the box around the Sun in the wide shot.
   float core = exp(-pow(r * 11.0, 1.7));
-  float halo = exp(-pow(r * 3.2, 1.15)) * 0.34;
+  float halo = exp(-pow(r * 2.6, 1.05)) * 0.85;
 
   // Diffraction spikes, gently breathing.
   float breathe = 0.9 + 0.1 * sin(uTime * 0.7);
@@ -385,6 +390,11 @@ void main(){
   if (g < 0.003) discard;
 
   vec3 col = mix(uColorA, uColorB, clamp(r * 1.6, 0.0, 1.0));
-  gl_FragColor = vec4(col * g * 1.5, clamp(g, 0.0, 1.0));
+
+  // Held just under the bloom pass's threshold so this card never becomes a
+  // point source for it. The shape above is round by construction — clipped to
+  // the inscribed circle and faded to zero at its rim — and now it stays that
+  // way all the way to the screen.
+  gl_FragColor = vec4(min(col * g * 1.5, vec3(0.98)), clamp(g, 0.0, 1.0));
 }
 `;
